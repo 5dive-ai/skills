@@ -134,6 +134,82 @@ Never call `5dive agent auth login <type>` from your own process — it
 hands the TTY off to the upstream CLI's interactive flow and hangs your
 agent. Use `auth start` / `auth set` instead.
 
+### Talking to other agents (inter-agent comms)
+
+`agent send` and `agent ask` work as a tiny message bus between agents on the
+same host. There is no separate channel — messages land in the receiver's
+running CLI as if a human had typed them.
+
+#### Sending: attribution is automatic
+
+When you (an agent) shell out to `sudo 5dive agent send <name> "..."`, the CLI
+sees that `$SUDO_USER` is `agent-<you>` and wraps the payload as:
+
+```
+[5dive-msg from=<you> id=<8-hex>] <your text>
+```
+
+so the receiver can tell it's being pinged by a peer agent and which one.
+Override the inferred name with `--from=<label>`. Skip wrapping with `--raw`
+(useful when you're piping a prompt that already has its own structure).
+
+Humans running `sudo 5dive agent send` directly never get auto-wrapped — only
+sends from `agent-*` users do.
+
+#### Receiving: recognise the envelope and reply by name
+
+When a line like
+
+```
+[5dive-msg from=scout id=ab12cd34] please summarise the auth middleware audit
+```
+
+appears as your input, treat it as an inter-agent request. To reply, send
+back to the named sender:
+
+```bash
+sudo 5dive agent send scout "[re=ab12cd34] auth middleware looks clean except for ..."
+```
+
+The `[re=<id>]` prefix is convention, not enforced — it lets the original
+sender match your reply to their question when they're juggling several at
+once. Drop it for casual back-and-forth.
+
+#### One-shot synchronous calls: `agent ask`
+
+If you want a request/response in one CLI call (no manual polling of
+`agent logs`), use `ask`:
+
+```bash
+sudo 5dive agent ask scout \
+  "list the OWASP A01 issues you found, one per line" \
+  --timeout=180 --json
+```
+
+It sends the wrapped envelope, then watches `tmux capture-pane` after the
+marker line and returns once the scrollback has been quiet for `--idle-secs`
+(default 5s). Stdout (text mode) is just the reply body; in `--json` mode the
+envelope is `{ok:true, data:{name, from, msg_id, reply}}`.
+
+Caveats — read these before leaning on `ask`:
+
+1. **Idle-by-stability is heuristic.** A receiver that streams progress
+   continuously will keep `ask` awake until `--timeout` fires. If you're
+   asking for something the receiver might narrate (long agentic work),
+   prompt it for a terse final summary or use plain `send` + `logs`.
+2. **The reply is whatever was on screen.** It includes any chrome the
+   receiver CLI prints (cursor lines, status hints) — don't expect a clean
+   JSON body unless the prompt asks for one.
+3. **No retries, no delivery confirmation.** If the receiver crashed mid-
+   reply you'll get a partial slice or a timeout, nothing in between.
+
+#### Rules of thumb
+
+- For "fire-and-forget delegate, I'll check later": `agent send` + poll `agent logs --tmux` when it suits you.
+- For "I need an answer to continue": `agent ask`.
+- For broadcast / fan-out across N agents: loop `agent send` (or `agent ask` in parallel via `&` + `wait`). Each call is independent.
+- Don't reuse `--from` labels for unrelated agents — pick a label that names *you*, so receivers can address replies correctly.
+
 ### Diagnose a sick host
 
 ```bash
