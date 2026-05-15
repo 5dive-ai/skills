@@ -7,6 +7,7 @@ Skills published by [5dive](https://5dive.com) for use with
 | Skill                  | Purpose                                                       |
 | ---------------------- | ------------------------------------------------------------- |
 | [`5dive-cli`](./5dive-cli) | Drive the local `5dive` CLI on a 5dive runtime VM. Lets an agent spawn, inspect, send to, and tear down sibling agents on the same host. |
+| [`diagnose`](./diagnose) | Self-diagnosis for 5dive agents. Runs auth, service, disk, memory, and skill-integrity checks on the VM and returns a root-cause report — so the agent can fix problems itself instead of asking the user. |
 
 ## Install on a 5dive agent
 
