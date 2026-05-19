@@ -288,12 +288,42 @@ Caveats — read these before leaning on `ask`:
 3. **No retries, no delivery confirmation.** If the receiver crashed mid-
    reply you'll get a partial slice or a timeout, nothing in between.
 
+#### Delegating a request that came in over a channel
+
+If a user pings you on a Telegram/Discord chat where the target agent's bot
+is **also** a member, do not relay the answer yourself. Hand the target
+agent the chat context and tell it to post directly via its own bot —
+attribution stays clean, the conversation reads naturally, and you stop
+being a middleman.
+
+When using `agent send` / `agent ask` on behalf of a chat user, include in
+the prompt:
+
+- the originating `chat_id` (and the inbound `message_id` if you want
+  thread replies),
+- the requesting user's handle and which bot they pinged,
+- an explicit instruction: "reply directly in that chat via your own bot —
+  do not reply to me here".
+
+Example:
+
+```bash
+sudo 5dive agent send marketing \
+  "User @alice (Telegram chat_id=-100123…) asked @ops_bot to get your take
+   on the Q3 launch copy. Your bot @mkt_bot is in that chat — please reply
+   there directly via your Telegram tool. Do NOT reply back to me."
+```
+
+If the target agent's bot is **not** in the chat, fall back to relaying
+through your own channel and tell the user the bot needs to be added.
+
 #### Rules of thumb
 
 - For "fire-and-forget delegate, I'll check later": `agent send` + poll `agent logs --tmux` when it suits you.
 - For "I need an answer to continue": `agent ask`.
 - For broadcast / fan-out across N agents: loop `agent send` (or `agent ask` in parallel via `&` + `wait`). Each call is independent.
 - Don't reuse `--from` labels for unrelated agents — pick a label that names *you*, so receivers can address replies correctly.
+- When a request originates from a chat the target agent can post to, prefer direct reply over relay (see above).
 
 ### Diagnose a sick host
 
