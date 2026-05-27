@@ -8,6 +8,8 @@ on the host is authoritative; this file is the canonical reference shape.
 ```
 5dive agent   ...                    # agent CRUD
 5dive account ...                    # named auth profiles
+5dive task    ...                    # host-shared task queue (no sudo)
+5dive org     ...                    # agent org chart (no sudo)
 5dive doctor  [--repair] [--category=deps|types|auth|registry|shelld]
 5dive --help | -h | help
 ```
@@ -101,6 +103,44 @@ The reserved name `default` is rejected by `account add` / `rename`.
 5dive agent skill <name> add  --source=<owner/repo> --skill=<id>
 5dive agent skill <name> list
 5dive agent skill <name> rm   <skill-id>
+```
+
+## Tasks (shared queue)
+
+Host-shared task queue at `/var/lib/5dive/tasks/tasks.db` (sqlite, WAL). The
+store is group-writable, so every `agent-*` user can read/write **without
+sudo**. Tasks get a `DIVE-N` ident; statuses are
+`todo | in_progress | blocked | done | cancelled`.
+
+```
+5dive task add <title...> [--body=<text>] [--priority=low|medium|high|urgent]
+                          [--assignee=<agent>] [--parent=<id|DIVE-N>] [--from=<who>]
+5dive task ls   [--status=<s>] [--assignee=<agent>] [--mine] [--all]  # default: open, priority-ordered
+5dive task show <id|DIVE-N>                       # detail + subtasks + blockers
+5dive task assign <id|DIVE-N> <agent>
+5dive task start  <id|DIVE-N>                     # -> in_progress
+5dive task done   <id|DIVE-N>                     # -> done
+5dive task cancel <id|DIVE-N>                     # -> cancelled
+5dive task block   <id|DIVE-N> --by=<id|DIVE-N>   # add a blocks edge, mark blocked
+5dive task unblock <id|DIVE-N> [--by=<id|DIVE-N>] # drop edge(s); back to todo if clear
+5dive task rm <id|DIVE-N>                         # delete (cascades subtasks + edges)
+```
+
+`task init` is a one-time root bootstrap run at provision time — agents never
+call it. From an agent, `--from` defaults to your `agent-*` name (or `SUDO_USER`
+when run via sudo), so `created_by` is attributed automatically.
+
+## Org chart
+
+Who-reports-to-whom across agents, in the same group-writable store (no sudo).
+A single self-referential `reports_to` edge per agent, plus optional role/title.
+
+```
+5dive org set <agent> [--manager=<agent>|default] [--role=<text>] [--title=<text>]  # upsert; --manager=default clears
+5dive org tree                                    # whole hierarchy, indented
+5dive org show <agent>                             # manager + direct reports
+5dive org ls                                       # flat list of everyone placed
+5dive org rm <agent>                               # remove (reports re-parent to null)
 ```
 
 ## Doctor

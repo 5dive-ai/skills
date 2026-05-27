@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger this skill whenever the user asks for a worker, sub-agent, side task, parallel run, "another agent", "fan out", "delegate", or names a sibling agent in natural language ("redirect to X", "ask X", "ping X", "tell X", "coordinate with X", "hand off to X") — in those cases confirm the agent exists with `5dive agent list --json` first, then `agent send`. Also trigger when the user asks to inspect, restart, or pair an existing agent, when they mention `/var/lib/5dive/`, or when they need a machine-readable health check (`5dive doctor --json`). When the user's request arrived over a chat channel (Telegram/Discord `<channel>` tag) and they want another agent involved, hand off the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so the target agent replies directly in the chat from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand — it is the only sanctioned way to keep agents under systemd.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger this skill whenever the user asks for a worker, sub-agent, side task, parallel run, "another agent", "fan out", "delegate", or names a sibling agent in natural language ("redirect to X", "ask X", "ping X", "tell X", "coordinate with X", "hand off to X") — in those cases confirm the agent exists with `5dive agent list --json` first, then `agent send`. Also trigger when the user asks to inspect, restart, or pair an existing agent, when they mention `/var/lib/5dive/`, or when they need a machine-readable health check (`5dive doctor --json`). It also covers the host-shared task queue (`5dive task`) and agent org chart (`5dive org`) for tracking work and reporting structure across sibling agents. When the user's request arrived over a chat channel (Telegram/Discord `<channel>` tag) and they want another agent involved, hand off the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so the target agent replies directly in the chat from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand — it is the only sanctioned way to keep agents under systemd.
 ---
 
 # 5dive-cli
@@ -28,6 +28,8 @@ hands — for example:
 - The user wants to inspect / restart / pair / tear down an agent that
   already exists on the host.
 - You need a machine-readable health check of the host's coding-CLI stack.
+- You're coordinating work across several agents and want a shared to-do list
+  or a reporting structure (`5dive task`, `5dive org`).
 
 If the user just wants you to do the work yourself, do not spawn an agent.
 
@@ -353,6 +355,37 @@ reply yourself, and tell the user the bot needs to be added.
 - For broadcast / fan-out across N agents: loop `agent send` (or `agent ask` in parallel via `&` + `wait`). Each call is independent.
 - Don't reuse `--from` labels for unrelated agents — pick a label that names *you*, so receivers can address replies correctly.
 - When a request originates from a chat the target agent can post to, prefer direct reply over relay (see above).
+
+### Track shared work: the task queue + org chart
+
+When you fan work out across several agents, the host has a shared task queue
+and an org chart so the team works off one source of truth. Both live in a
+group-writable sqlite store (`/var/lib/5dive/tasks`), so **no sudo is needed** —
+any `agent-*` user can read and write directly.
+
+```bash
+# Queue a unit of work and hand it to a worker. Tasks get a DIVE-N ident;
+# --from defaults to your agent name, so created_by is attributed for you.
+5dive task add "audit the auth middleware for OWASP A01" \
+  --assignee=worker-1 --priority=high --json
+
+# What's open, who's on what (priority-ordered); --mine filters to you.
+5dive task ls --json
+5dive task ls --mine --json
+
+# Drive status as work moves. block/unblock express dependencies.
+5dive task start DIVE-7 --json          # -> in_progress
+5dive task done  DIVE-7 --json
+5dive task block DIVE-9 --by=DIVE-7 --json   # DIVE-9 waits on DIVE-7
+
+# Express who coordinates whom. --manager=default puts an agent at the top.
+5dive org set worker-1 --manager=lead --title="Auth audit" --json
+5dive org tree --json
+```
+
+A receiver that's assigned a task sees it via `5dive task ls --mine`; pair this
+with `agent send` to actually nudge them. `task init` is a one-time root
+bootstrap done at provision — never call it.
 
 ### Diagnose a sick host
 
