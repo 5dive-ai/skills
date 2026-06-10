@@ -5,6 +5,7 @@ The CLI manages every path here. Don't edit them by hand.
 | Path                                              | What                                                              |
 | ------------------------------------------------- | ----------------------------------------------------------------- |
 | `/var/lib/5dive/agents.json`                      | Agent registry (versioned). Source of truth for `agent list`.     |
+| `/var/lib/5dive/tasks/tasks.db`                   | Shared task queue + org chart (sqlite, group-writable, no sudo).  |
 | `/var/lib/5dive/agents.d/<name>.env`              | Per-agent systemd `EnvironmentFile`.                              |
 | `/var/lib/5dive/auth-profiles/<name>/`            | Named auth profile env files + captured CLI config.               |
 | `/var/lib/5dive/auth-sessions/<id>/`              | Live device-code session state (poll / submit / cancel).          |
