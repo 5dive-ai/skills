@@ -195,6 +195,26 @@ still open. Templates default to `fresh` (worker `/clear`s before the task);
 `--fresh` / `--no-fresh` override per template. No catch-up for missed
 ticks — keep schedules coarse (hourly/daily).
 
+### Loops — chain agents into a relay (+ maker→verifier review)
+
+```
+# Relay loop: each step auto-hands-off to the next on `task done`; a gate pauses for a human.
+5dive task loop start --title=<name> --steps=<json>   # --steps = JSON array; each item is:
+            #   {"agent":"<name>","label":"...","handoff":"..."}  work step (handoff optional)
+            #   {"gate":"approval","label":"..."}                 human approval gate
+            # [--project=<key>] [--owner=<agent>] [--from=<who>]
+5dive task loop ls [--all]                            # board of loop runs: step progress + status
+# Edit a running loop = act on its subtasks (task ls/assign/block/unblock/rm, slip in a task need
+# gate). Stop it = `task rm` the run parent (cascades to the steps).
+
+# Maker→verifier loop — the writer never grades itself (DIVE-477):
+5dive task add <title> --verifier=<agent> [--max-iters=<n>] [--accept=<criteria>] [--verify=<cmd>]
+            # the maker's `task done` HANDS OFF to the verifier instead of closing
+5dive task reject <id|DIVE-N> [--feedback="<what to fix>"]   # FAIL: bounce to maker; escalate to a human at max-iters
+5dive task verify <id|DIVE-N> [--cmd="<cmd>"]                # run the grade cmd (falls back to the stored --verify)
+5dive task loops [--stuck] [--all] [--escalate-stuck]        # board of maker→verifier loops
+```
+
 `task init` is a one-time root bootstrap run at provision time — agents never
 call it. From an agent, `--from` defaults to your `agent-*` name (or `SUDO_USER`
 when run via sudo), so `created_by` is attributed automatically.

@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`), or declarative fleets (`5dive up`, `5dive team import`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`) — or declarative fleets (`5dive up`, `5dive team import`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
 ---
 
 # 5dive-cli
@@ -32,6 +32,9 @@ hands — for example:
   or a reporting structure (`5dive task`, `5dive org`).
 - Work should recur on a schedule (`task add --recurring`) or an agent should
   be woken only when it has queued work (`5dive heartbeat`).
+- You want to chain agents into a loop that hands off step to step (with
+  optional human gates), or set up an independent maker→verifier review —
+  including building or editing one for the user on request (`task loop`).
 - You're blocked on something only a human can provide — a decision, a
   secret, an approval (`5dive task need`).
 
@@ -524,6 +527,60 @@ call it yourself. Enrolment uses the agent's **short name** (`worker-1`),
 the same name `task --assignee` expects — not the Linux user `agent-worker-1`.
 No catch-up for missed ticks: if the host is down over a scheduled minute,
 that occurrence is skipped, so keep schedules coarse (hourly/daily).
+
+### Loops: relay work across agents (+ human gates)
+
+A loop chains agents into an auto-relay: each step hands off to the next the
+moment its `task done` lands, and a human gate pauses the chain for a tap. This
+is the CLI behind the dashboard loop builder — and because it's just the CLI,
+**you can build, edit, and inspect a loop conversationally**. "Set up a content
+pipeline: research → draft → my approval → publish" becomes a `task loop start`;
+"swap step 3 to Marcus / add a gate before publish / stop the running loop" is
+just editing the run's tasks. The dashboard can't safely edit a running loop —
+you can.
+
+```bash
+# Start a relay. --steps is a JSON array; each item is either a work step
+# {agent,label,handoff?} or a human gate {gate:"approval",label}.
+5dive task loop start --title="Content pipeline" --steps='[
+  {"agent":"olivia","label":"Pick the topic and brief the writer","handoff":"briefs"},
+  {"agent":"theo","label":"Draft the post","handoff":"sends to review"},
+  {"agent":"dario","label":"Fact-check and tighten","handoff":"sends for approval"},
+  {"gate":"approval","label":"You approve before it publishes"},
+  {"agent":"theo","label":"Publish and close"}
+]' --json
+
+5dive task loop ls --json        # board of loop runs: per-run step progress + status
+```
+
+The relay creates one subtask per step, chained N+1-blocked-by-N under a run
+parent. Step 1's agent is pinged immediately; each `task done` frees the next
+step (the heartbeat wakes that agent); a gate step blocks until the human
+answers it (`task answer`, or a Telegram tap). To **edit a running loop**, act
+on its subtasks (`task ls`, `task assign`, `task block/unblock`, `task rm`, or
+slip in a `task need` gate); to stop it, `task rm` the run parent (cascades).
+
+#### Maker→verifier loops: the writer never grades itself
+
+For "do the work, then have someone independent check it," give a task a
+**verifier** different from its assignee:
+
+```bash
+5dive task add "migrate the auth module to the new SDK" \
+  --assignee=dario --verifier=marcus --max-iters=3 \
+  --accept="builds clean, tests pass, no public API change" --json
+
+# The maker's `task done` does NOT close it — it hands off to the verifier, who
+# grades against --accept and either closes it (their own `task done`) or:
+5dive task reject DIVE-7 --feedback="tests pass but the public signature changed" --json
+# -> bounces back to the maker for another pass; escalates to a human at --max-iters.
+
+5dive task loops --json          # board of maker→verifier loops (--stuck / --escalate-stuck)
+```
+
+`--verify="<cmd>"` stores a default command that `5dive task verify <id>` runs
+to grade automatically. Writer ≠ grader is the whole point — never set the
+verifier to the same agent as the assignee.
 
 ### Diagnose a sick host
 
