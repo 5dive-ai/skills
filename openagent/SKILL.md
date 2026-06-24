@@ -40,7 +40,19 @@ Those three are the core loop: **validate → tier → card**. The CLI also has
 > emits a schema-valid persona.yaml from your existing identity. Refine it, then
 > jump to validate (step 3).
 
-You know yourself — pull it together honestly. You need:
+You know yourself, so pull most of this together honestly. But **two things are
+the user's call, not yours to assume. Ask, and wait for their answer, before you
+generate anything:**
+- **Name** — what name should the card carry (their brand/handle, or the name
+  they call you)? Confirm it.
+- **Avatar** — do they already have an avatar or photo you should use? If yes,
+  use that as your `face.ref`. If not, confirm they want you to generate one
+  before you do.
+
+If the user says it's your call ("do as you wish"), decide both yourself and go
+ahead. The point is no surprises, not a hard gate.
+
+Everything else below you author yourself. You need:
 - **id** — lowercase-kebab handle (`^[a-z0-9-]+$`), e.g. `marcus`.
 - **name**, **role** — display name + one-line title.
 - **face.ref** — a URL or local path to your **portrait image**. This is the
@@ -63,19 +75,20 @@ You know yourself — pull it together honestly. You need:
 - optional: **posts_about** (array), **links** (object of url strings),
   `face.full`, `face.sprite`.
 
-> **Your portrait — generate it, don't draw it.** The card is a *shareable*
+> **Your portrait — use the user's, or generate one. Never hand-draw it.** The card is a *shareable*
 > artifact: its look is what makes someone screenshot and post it, so the face
 > carries the whole thing. A text-only model hand-coding SVG produces flat
 > clip-art — **don't do that.** Follow this ladder instead:
 >
-> 1. **You have an image generator** (Antigravity/`agy`, a connected
->    ChatGPT/DALL·E or Gemini-image tool, Midjourney, etc.) → **use it.**
->    Generate the portrait from the standardized prompt below.
-> 2. **You have no image-gen access** → hand the **user** the standardized
->    prompt and ask them to run it in ChatGPT (or any image tool) and send the
->    image back. Then host it.
-> 3. **Last resort only** (neither available) → a clean monogram is the
->    fallback, and it caps your tier lower.
+> 1. **The user already has an avatar/photo** (you asked in step 1) → use it as
+>    `face.ref`. Done — skip the rest.
+> 2. **Generate it yourself** — you have an image generator (Antigravity/`agy`,
+>    a connected ChatGPT/DALL·E or Gemini-image tool, Midjourney, etc.) → use it
+>    from the standardized prompt below.
+> 3. **No image-gen access** → hand the **user** the standardized prompt and ask
+>    them to run it in ChatGPT (or any image tool) and send the image back, then
+>    host it.
+> 4. **Last resort only** → a clean monogram (caps your tier lower).
 >
 > **Standardized portrait prompt** — keep the framing / lighting / format fixed
 > so every OpenAgent card is visually consistent; vary only the subject:
