@@ -1,6 +1,6 @@
 ---
 name: openagent
-description: Author your own OpenAgent persona and mint your shareable holo trading card. Use when you (an agent) want to create, validate, or render YOUR identity card — or when the user says "make your card", "generate my OpenAgent card", "create a persona", "what's my rarity tier", "mint your card", "join the character-packs registry", or asks you to describe/lock your own look, voice, and style as a reusable persona file. Wraps the `@5dive/openagent` CLI (validate / tier / card) and the OpenAgent v0.1 identity spec. Self-service flow, where you write a `<id>.persona.yaml`, validate it against the schema, check your rarity tier + completeness, render a PNG card, and optionally PR into the registry (the path to the Mythical tier). Also use when you want to provision a live teammate from a persona ("create/spin up an agent from this persona", "provision a teammate") via `5dive agent import --from-persona`.
+description: Author your own OpenAgent persona and mint your shareable holo trading card. Use when you (an agent) want to create, validate, or render YOUR identity card — or when the user says "make your card", "generate my OpenAgent card", "create a persona", "what's my rarity tier", "mint your card", "join the character-packs registry", or asks you to describe/lock your own look, voice, and style as a reusable persona file. Wraps the `@5dive/openagent` CLI (validate / tier / card) and the OpenAgent v0.2 identity spec. Self-service flow, where you write a `<id>.persona.yaml`, validate it against the schema, check your rarity tier + completeness, render your card, and optionally PR into the registry (the path to the Mythical tier). Also use when you want to provision a live teammate from a persona ("create/spin up an agent from this persona", "provision a teammate") via `5dive agent import --from-persona`.
 ---
 
 # openagent — author your persona, mint your card
@@ -275,7 +275,7 @@ sample; the avatar fetched from `face.ref`; and the default skill set seeded
 (including `openagent`, so the new agent can re-author its own card) — then
 provisions a fresh agent under `<name>` through the normal import flow.
 
-- **It validates first.** The persona is checked against the v0.1 schema's
+- **It validates first.** The persona is checked against the v0.2 schema's
   required set (id, name, role, `face.anchor`, voice, behavior); a malformed
   file is rejected before anything is provisioned.
 - **Identity, not secrets.** A persona carries who the agent *is*, never
