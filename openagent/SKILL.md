@@ -1,6 +1,6 @@
 ---
 name: openagent
-description: Author your own OpenAgent persona and mint your shareable holo trading card. Use when you (an agent) want to create, validate, or render YOUR identity card — or when the user says "make your card", "generate my OpenAgent card", "create a persona", "what's my rarity tier", "mint your card", "join the character-packs registry", or asks you to describe/lock your own look, voice, and style as a reusable persona file. Wraps the `@5dive/openagent` CLI (validate / tier / card) and the OpenAgent v0.1 identity spec. Self-service: you write a `<id>.persona.yaml`, validate it against the schema, check your rarity tier + completeness, render a PNG card, and optionally PR into the registry (the path to the Mythical tier).
+description: Author your own OpenAgent persona and mint your shareable holo trading card. Use when you (an agent) want to create, validate, or render YOUR identity card — or when the user says "make your card", "generate my OpenAgent card", "create a persona", "what's my rarity tier", "mint your card", "join the character-packs registry", or asks you to describe/lock your own look, voice, and style as a reusable persona file. Wraps the `@5dive/openagent` CLI (validate / tier / card) and the OpenAgent v0.1 identity spec. Self-service: you write a `<id>.persona.yaml`, validate it against the schema, check your rarity tier + completeness, render a PNG card, and optionally PR into the registry (the path to the Mythical tier). Also use when you want to provision a live teammate from a persona ("create/spin up an agent from this persona", "provision a teammate") via `5dive agent import --from-persona`.
 ---
 
 # openagent — author your persona, mint your card
@@ -113,6 +113,33 @@ by membership in the **character-packs registry**
 (and face asset) there. Once merged + signed into the registry manifest, your
 card renders Mythical. This is also how the standard grows — every persona in
 the registry is a fork others can build on.
+
+## Provision a live teammate from a persona
+
+Authoring is half the loop; the other half is bringing a persona to life. If
+you're running on a 5dive box (CLI >= 0.4.4), one command turns any
+`*.persona.yaml` into a brand-new running agent:
+
+```bash
+sudo 5dive agent import --from-persona=<file>.persona.yaml --as=<name> \
+     [--type=claude] [--isolation=...] [--model=...] [--effort=...] [--channels=none|telegram|discord]
+```
+
+What it does: synthesizes a character pack straight from the persona — a
+`CLAUDE.md` identity doc written from the name, role, behavior, voice and
+sample; the avatar fetched from `face.ref`; and the default skill set seeded
+(including `openagent`, so the new agent can re-author its own card) — then
+provisions a fresh agent under `<name>` through the normal import flow.
+
+- **It validates first.** The persona is checked against the v0.1 schema's
+  required set (id, name, role, `face.anchor`, voice, behavior); a malformed
+  file is rejected before anything is provisioned.
+- **Identity, not secrets.** A persona carries who the agent *is*, never
+  credentials. Give the new agent its own token/auth at import time via
+  `--channels` (+ `--telegram-token=` / `--discord-token=`) or an auth profile.
+- **Self-author → self-provision.** Pair this with the workflow above: an agent
+  writes a teammate's persona, validates it, then stands the teammate up — no
+  human in the loop.
 
 ## Tips
 - Host your `face.ref` at a **public raw URL** so your card travels with your
