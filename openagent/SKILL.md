@@ -8,8 +8,8 @@ description: Author your own OpenAgent persona and mint your shareable holo trad
 OpenAgent is a vendor-neutral open standard for agent **identity**: one
 `*.persona.yaml` file locks how you look, sound, and write so you stay
 consistent across text, audio, and video. This skill walks you through
-creating yours and rendering a shareable **trading card** from it — complete
-with a **rarity tier** earned by how complete your persona is.
+creating yours and rendering a shareable **trading card** from it — stamped
+with a **rarity tier rolled from your identity** (random, permanent, unfarmable).
 
 Repo + spec: `github.com/5dive-ai/openagent` (MIT).
 
@@ -21,7 +21,7 @@ command:
 
 ```bash
 npx github:5dive-ai/openagent validate <id>.persona.yaml          # schema check, exit 0 = valid
-npx github:5dive-ai/openagent tier     <id>.persona.yaml --json   # rarity tier + completeness % + next-tier blocker
+npx github:5dive-ai/openagent tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
 npx github:5dive-ai/openagent card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
 ```
 
@@ -67,7 +67,8 @@ Everything else below you author yourself. You need:
   **anchor** — one sentence describing the look (who you read as, setting,
   framing, lens) so any generated variants stay on-model.
 - **voice.audio.base** — your base TTS voice name. If you don't have one yet,
-  use `unset` (it renders, but caps you at a low tier — see below).
+  use `unset` (it still renders, but it's lower quality and dents your
+  completeness — it does NOT change your rarity tier, which is rolled from your identity).
   **voice.audio.style** — a sentence on cadence/energy.
 - **voice.written.rules** — 2-4 rules for how you write. **sample** — one line
   in your actual voice.
@@ -80,15 +81,18 @@ Everything else below you author yourself. You need:
 > carries the whole thing. A text-only model hand-coding SVG produces flat
 > clip-art — **don't do that.** Follow this ladder instead:
 >
-> 1. **The user already has an avatar/photo** (you asked in step 1) → use it as
->    `face.ref`. Done — skip the rest.
+> 1. **The user already has an avatar/photo, or sends you one in chat** (you
+>    asked in step 1) → that's the face. If they sent a file in chat, download it
+>    locally first. Then **host it** (see "Host the face so it travels" below)
+>    and use that raw URL as `face.ref`. Done — skip the generation steps.
 > 2. **Generate it yourself** — you have an image generator (Antigravity/`agy`,
 >    a connected ChatGPT/DALL·E or Gemini-image tool, Midjourney, etc.) → use it
 >    from the standardized prompt below.
 > 3. **No image-gen access** → hand the **user** the standardized prompt and ask
 >    them to run it in ChatGPT (or any image tool) and send the image back, then
 >    host it.
-> 4. **Last resort only** → a clean monogram (caps your tier lower).
+> 4. **Last resort only** → a clean monogram (looks plainer and lowers your
+>    completeness; it does not change your rarity tier).
 >
 > **Standardized portrait prompt** — keep the framing / lighting / format fixed
 > so every OpenAgent card is visually consistent; vary only the subject:
@@ -102,9 +106,29 @@ Everything else below you author yourself. You need:
 > square, photoreal, no text, no logos, no watermark.
 > ```
 >
-> Host the result at a **public raw URL** → `face.ref`, and record how you made
-> it in **`face.recipe`** (model + prompt) so the likeness is reproducible — the
-> visual equivalent of voice = base + style.
+> Record how you made it in **`face.recipe`** (model + prompt) so the likeness is
+> reproducible — the visual equivalent of voice = base + style.
+
+> **Host the face so it travels.** `face.ref` must be a **public raw URL**, not a
+> local path — a local-only path renders fine for you but falls back to a plain
+> monogram the moment anyone else opens the card (and the card exists to be
+> shared). This applies to every path above: a photo the user sent, one you
+> generated, or one they sent back. To host it:
+>
+> 1. **PR it into the registry (preferred, free, permanent)** → drop the image in
+>    the `faces/` folder of `5dive-ai/openagent` as `faces/<id>.<ext>` and open a
+>    PR. Once merged, the raw URL is
+>    `https://raw.githubusercontent.com/5dive-ai/openagent/main/faces/<id>.<ext>`.
+>    Use that as `face.ref`. (You're likely PRing into the registry for the
+>    Mythical path anyway — same PR.)
+> 2. **Any image host** → Imgur, an S3/R2 bucket, your own site, a GitHub asset on
+>    any repo. Anything that serves the raw bytes over https works. Paste the
+>    direct image URL (it should end in the image, not an HTML gallery page) as
+>    `face.ref`.
+>
+> Quick check: open `face.ref` in a fresh incognito tab. If the bare image loads,
+> it'll travel. If it 404s or shows a login wall, it won't — fix it before you
+> render.
 
 ### 2. Write `<id>.persona.yaml`
 Use this template (required: `id, name, role, face{ref,anchor}, voice, behavior`):
@@ -114,6 +138,9 @@ openagent: "0.1"
 id: yourhandle
 name: Your Name
 role: Your Role
+org:                        # optional — your company/team/owner, for grouping/filtering
+  name: 5dive              # the display + filter key (omit the whole block if solo)
+  url: https://5dive.ai    # optional
 face:
   ref: https://raw.githubusercontent.com/<org>/<repo>/main/faces/yourhandle.png
   anchor: "one sentence: who you read as, setting, framing, lens"
@@ -143,24 +170,28 @@ The validator prints readable errors (missing field, bad `id` pattern, extra
 keys — the schema is `additionalProperties: false`, so no stray fields). Loop
 until exit 0.
 
-### 4. Check your tier — then climb it
+### 4. Check your tier
 ```bash
 npx github:5dive-ai/openagent tier yourhandle.persona.yaml --json
 ```
-Rarity is a **deterministic function of completeness** (gate ladder — highest
-passing tier wins). Each tier needs everything below it, plus:
+Your rarity is **rolled from your identity** — the `did:key` derived from your
+signing key — not from how complete your file is. It's random, **permanent, and
+unfarmable**: same identity → same tier, forever. You can't fill in fields to
+rank up. (To be graded at all you must be schema-valid **and signed**; an
+unsigned persona is *Ungraded*. Signing is what mints your permanent roll.)
 
-| Tier | What earns it |
-|------|---------------|
-| 🟢 **Common** | schema-valid (id, name, role, voice.audio.base, written.sample) |
-| 🔵 **Rare** | `face.ref` resolves to a real image + a real written sample |
-| 🟣 **Epic** | `voice.audio.base` is a **named** voice (not `unset`) + `behavior` |
-| 🟡 **Legendary** | `voice.style` + `face.anchor`/`sprite` + `links` + `posts_about` (fully specified) |
-| ✨ **Mythical** | Legendary **and** your `id` is in the official character-packs registry (conferred — can't be farmed) |
+| Tier | Odds | How you get it |
+|------|------|----------------|
+| 🟢 **Common** | 60% | rolled from your `did:key` |
+| 🔵 **Rare** | 25% | rolled from your `did:key` |
+| 🟣 **Epic** | 11% | rolled from your `did:key` |
+| 🟡 **Legendary** | 4% | rolled from your `did:key` |
+| ✨ **Mythical** | — | conferred, never rolled — accepted into the character-packs registry (curated + signed) |
 
-The `tier` output tells you your current tier, completeness %, and the exact
-blocker for the next one. Fill that gap and re-run to climb. (A persona with
-`base: unset` caps at Rare — name a real voice to reach Epic.)
+Completeness % and **badges** are a *separate* axis: they reward a
+fully-specified persona without ever moving your tier, so keep filling things out
+for the badges and the better-looking card. The only tier you can *climb to* is
+Mythical, by being conferred into the registry (step 7).
 
 ### 5. Render your card
 **Render your card — it's animated by default.** A holo card in motion gets
@@ -198,7 +229,8 @@ Autonomous CEO, Legendary 🟡"*). One screenshot in a chat is how the standard
 spreads.
 
 ### 7. (Optional) Go Mythical — PR into the registry
-Mythical is the only tier you can't earn by editing your file — it's conferred
+Mythical is the only tier you can climb to at all — every other tier is rolled
+from your identity and permanent. It's conferred
 by membership in the **character-packs registry**
 (`github.com/5dive-ai/character-packs`). Open a PR adding your persona file
 (and face asset) there. Once merged + signed into the registry manifest, your
