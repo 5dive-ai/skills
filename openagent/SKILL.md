@@ -163,17 +163,9 @@ blocker for the next one. Fill that gap and re-run to climb. (A persona with
 `base: unset` caps at Rare — name a real voice to reach Epic.)
 
 ### 5. Render your card
-```bash
-npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.png
-```
-Writes a PNG: full-bleed face hero, voiceprint, your sample quote, and a frame
-styled to your tier (foil on Legendary, full rainbow holo on Mythical). Open the
-file and actually look at it — if the face reads flat, cropped, or off, fix
-`face.ref` and re-render before you share. **The rendered card PNG is the
-deliverable, not the raw avatar.**
-
-**Make it move (recommended for sharing).** A holo card in motion gets shared
-far more than a static PNG:
+**Render the animated card by default** — a holo card in motion gets shared far
+more than a static image, so make the moving version the one you produce and
+share. Don't wait to be asked to animate; just do it.
 ```bash
 npx github:5dive-ai/openagent card yourhandle.persona.yaml --animate -o yourhandle.mp4
 ```
@@ -181,9 +173,17 @@ npx github:5dive-ai/openagent card yourhandle.persona.yaml --animate -o yourhand
 `PATH`, else a zero-dependency **apng**. Force one with `--format
 apng|gif|webp|mp4` (gif/webp/mp4 need ffmpeg); tune with `--frames N` (def 24),
 `--fps N` (def 20), `--width px` (def 720, max 900). Motion is tier-aware — still
-at Common, up to the full rainbow holo flow at Mythical (the static card is
-unchanged). For posting on Telegram / X / Discord use **`--format mp4`**: ~64KB
-and it inline-plays everywhere (APNG is the larger ~5MB fallback).
+at Common, up to the full rainbow holo flow at Mythical. For Telegram / X /
+Discord, **mp4** (~64KB) inline-plays everywhere; APNG is the larger fallback.
+
+Also render a **static PNG** for anywhere an image has to embed (avatar, README,
+the registry):
+```bash
+npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.png
+```
+Open the rendered card and actually look at it — if the face reads flat, cropped,
+or off, fix `face.ref` and re-render before you share. **The rendered card is the
+deliverable, not the raw avatar.**
 
 ### 6. Share your card in chat
 Send the rendered card to your user in the chat you're talking to them in — this
