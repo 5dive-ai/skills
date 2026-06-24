@@ -15,17 +15,21 @@ Repo + spec: `github.com/5dive-ai/openagent` (MIT).
 
 ## The CLI
 
-Three subcommands. Until the v2 package is published to npm, use the GitHub
-form (always tracks `main`, has every command including `tier`):
+Run it with `npx`, no install. The npm package (`@5dive/openagent`) is still on
+an old build, so **use the GitHub form** — it always tracks `main` and has every
+command:
 
 ```bash
-npx github:5dive-ai/openagent validate <id>.persona.yaml   # schema check, exit 0=valid
-npx github:5dive-ai/openagent tier     <id>.persona.yaml --json   # rarity tier + completeness% + next-tier blocker
-npx github:5dive-ai/openagent card     <id>.persona.yaml -o <id>.png   # render the PNG card
+npx github:5dive-ai/openagent validate <id>.persona.yaml          # schema check, exit 0 = valid
+npx github:5dive-ai/openagent tier     <id>.persona.yaml --json   # rarity tier + completeness % + next-tier blocker
+npx github:5dive-ai/openagent card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
 ```
 
-Once `@5dive/openagent` v2 is live on npm, the clean form
-`npx @5dive/openagent <cmd>` works identically — prefer it then.
+Those three are the core loop: **validate → tier → card**. The CLI also has
+`speak` (voice a line via TTS), `flow` (emit a gen-video scene prompt), and
+`sign` / `verify` / `registry` (provenance + the Mythical registry) — covered in
+**Going further** below. When npm is refreshed the clean `npx @5dive/openagent
+<cmd>` form will work identically; prefer it then.
 
 ## Workflow
 
@@ -33,10 +37,17 @@ Once `@5dive/openagent` v2 is live on npm, the clean form
 You know yourself — pull it together honestly. You need:
 - **id** — lowercase-kebab handle (`^[a-z0-9-]+$`), e.g. `marcus`.
 - **name**, **role** — display name + one-line title.
-- **face.ref** — a URL or local path to your portrait image (a public raw
-  URL renders the real face anywhere; a local-only path falls back to a
-  monogram when others run your card). **anchor** — a sentence describing the
-  look (framing, setting, lens) so generated variants stay on-model.
+- **face.ref** — a URL or local path to your **portrait image**. This is the
+  single most important visual choice: the card renders it **full-bleed as the
+  hero**, so its quality *is* the card's quality. Aim for a polished
+  head-and-shoulders portrait — centered, facing forward, clear eyes, good
+  lighting, the kind of image you'd be happy to use as a real profile photo. A
+  real photo or a high-quality generated portrait both work; **avoid flat vector
+  clip-art, emoji, logos, mascots, or busy scenes** — they make the card look
+  cheap. Host it at a **public raw URL** so the real face travels with the card
+  (a local-only path falls back to a plain monogram when anyone else renders it).
+  **anchor** — one sentence describing the look (who you read as, setting,
+  framing, lens) so any generated variants stay on-model.
 - **voice.audio.base** — your base TTS voice name. If you don't have one yet,
   use `unset` (it renders, but caps you at a low tier — see below).
   **voice.audio.style** — a sentence on cadence/energy.
@@ -104,15 +115,48 @@ blocker for the next one. Fill that gap and re-run to climb. (A persona with
 npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.png
 ```
 Writes a PNG: full-bleed face hero, voiceprint, your sample quote, and a frame
-styled to your tier (foil on Legendary, full rainbow holo on Mythical). Share it.
+styled to your tier (foil on Legendary, full rainbow holo on Mythical). Open the
+file and actually look at it — if the face reads flat, cropped, or off, fix
+`face.ref` and re-render before you share. **The rendered card PNG is the
+deliverable, not the raw avatar.**
 
-### 6. (Optional) Go Mythical — PR into the registry
+### 6. Share your card in chat
+Send the rendered PNG to your user in the chat you're talking to them in — this
+is the payoff of the whole exercise, don't skip it. Attach the **actual image
+file**, not a link or a description: on Telegram/Discord, pass the absolute path
+to `yourhandle.png` to your reply tool's file/attachment argument. Lead with one
+short line — your name, role, and tier (e.g. *"Here's my OpenAgent card — Tencha,
+Autonomous CEO, Legendary 🟡"*). One screenshot in a chat is how the standard
+spreads.
+
+### 7. (Optional) Go Mythical — PR into the registry
 Mythical is the only tier you can't earn by editing your file — it's conferred
 by membership in the **character-packs registry**
 (`github.com/5dive-ai/character-packs`). Open a PR adding your persona file
 (and face asset) there. Once merged + signed into the registry manifest, your
 card renders Mythical. This is also how the standard grows — every persona in
 the registry is a fork others can build on.
+
+## Going further — voice, video, provenance
+
+Your persona is one identity that works across media. Once your card is good,
+the same file drives more:
+
+```bash
+# Voice — speak a line in your persona's base voice (needs GEMINI_API_KEY)
+GEMINI_API_KEY=… npx github:5dive-ai/openagent speak <id>.persona.yaml "your line" -o out.wav
+
+# Video — emit a paste-ready gen-video scene prompt + reference image that keep
+# your face consistent across clips (engine-neutral: Flow/Veo/Runway/Pika/…)
+npx github:5dive-ai/openagent flow <id>.persona.yaml "a scene description"
+
+# Provenance — sign your persona and verify another's (ed25519)
+npx github:5dive-ai/openagent sign   <id>.persona.yaml --key <keyfile>
+npx github:5dive-ai/openagent verify <id>.persona.yaml
+```
+
+`speak` renders the **base** voice (an approximation); a cloned/custom voice can
+be added later via `voice.audio.ref` without re-gating your tier.
 
 ## Provision a live teammate from a persona
 
