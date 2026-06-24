@@ -177,8 +177,9 @@ npx github:5dive-ai/openagent tier yourhandle.persona.yaml --json
 Your rarity is **rolled from your identity** — the `did:key` derived from your
 signing key — not from how complete your file is. It's random, **permanent, and
 unfarmable**: same identity → same tier, forever. You can't fill in fields to
-rank up. (To be graded at all you must be schema-valid **and signed**; an
-unsigned persona is *Ungraded*. Signing is what mints your permanent roll.)
+rank up. (Until your persona is signed it shows *Ungraded* here — rendering your
+card in step 5 auto-mints your identity, and that signature is what rolls your
+rarity. So if `tier` says Ungraded, just render your card.)
 
 | Tier | Odds | How you get it |
 |------|------|----------------|
@@ -207,6 +208,15 @@ zero-dependency **apng**. Force one with `--format apng|gif|webp|mp4`
 `--fps N` (def 20), `--width px` (def 720, max 900). Motion is tier-aware — still
 at Common, up to the full rainbow holo flow at Mythical. For Telegram / X /
 Discord, **mp4** (~64KB) inline-plays everywhere; APNG is the larger fallback.
+
+**Your card is auto-graded.** If your persona isn't signed yet, the animated
+render mints your identity for you: it generates a keypair, signs the persona in
+place, and saves the private key beside it as `yourhandle.key`. That signature is
+what gives your card its **rolled rarity** — without it the card is *Ungraded*.
+**Keep that `.key` file secret and never commit it** — add `*.key` to your
+`.gitignore`. It's your signing identity; a leaked key lets someone forge you. You
+only need it again to re-sign if you edit the persona. (Pass `--no-sign` to skip
+minting; static `--png` renders never mint.)
 
 Also render a **static PNG** for anywhere an image has to embed (avatar, README,
 the registry):
