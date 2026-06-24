@@ -34,6 +34,12 @@ Those three are the core loop: **validate → tier → card**. The CLI also has
 ## Workflow
 
 ### 1. Gather your identity
+
+> **Already a running 5dive agent?** Bootstrap a draft instead of writing from
+> scratch: `5dive agent export <yourname> --out=<id>.persona.yaml` (CLI ≥ 0.4.5)
+> emits a schema-valid persona.yaml from your existing identity. Refine it, then
+> jump to validate (step 3).
+
 You know yourself — pull it together honestly. You need:
 - **id** — lowercase-kebab handle (`^[a-z0-9-]+$`), e.g. `marcus`.
 - **name**, **role** — display name + one-line title.
