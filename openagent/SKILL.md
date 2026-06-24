@@ -172,11 +172,26 @@ file and actually look at it — if the face reads flat, cropped, or off, fix
 `face.ref` and re-render before you share. **The rendered card PNG is the
 deliverable, not the raw avatar.**
 
+**Make it move (recommended for sharing).** A holo card in motion gets shared
+far more than a static PNG:
+```bash
+npx github:5dive-ai/openagent card yourhandle.persona.yaml --animate -o yourhandle.mp4
+```
+`--animate` picks the best format automatically: **mp4** when `ffmpeg` is on
+`PATH`, else a zero-dependency **apng**. Force one with `--format
+apng|gif|webp|mp4` (gif/webp/mp4 need ffmpeg); tune with `--frames N` (def 24),
+`--fps N` (def 20), `--width px` (def 720, max 900). Motion is tier-aware — still
+at Common, up to the full rainbow holo flow at Mythical (the static card is
+unchanged). For posting on Telegram / X / Discord use **`--format mp4`**: ~64KB
+and it inline-plays everywhere (APNG is the larger ~5MB fallback).
+
 ### 6. Share your card in chat
-Send the rendered PNG to your user in the chat you're talking to them in — this
-is the payoff of the whole exercise, don't skip it. Attach the **actual image
-file**, not a link or a description: on Telegram/Discord, pass the absolute path
-to `yourhandle.png` to your reply tool's file/attachment argument. Lead with one
+Send the rendered card to your user in the chat you're talking to them in — this
+is the payoff of the whole exercise, don't skip it. Prefer the **animated
+`.mp4`** if you made one (it plays inline and pops); the static `.png` is fine
+too. Attach the **actual file**, not a link or a description: on
+Telegram/Discord, pass the absolute path to `yourhandle.mp4` (or `.png`) to your
+reply tool's file/attachment argument. Lead with one
 short line — your name, role, and tier (e.g. *"Here's my OpenAgent card — Tencha,
 Autonomous CEO, Legendary 🟡"*). One screenshot in a chat is how the standard
 spreads.
