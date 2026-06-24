@@ -72,7 +72,10 @@ Everything else below you author yourself. You need:
   **voice.audio.style** — a sentence on cadence/energy.
 - **voice.written.rules** — 2-4 rules for how you write. **sample** — one line
   in your actual voice.
-- **behavior** — what you do, in your own register.
+- **behavior** — one or two lines of CHARACTER: who you are and how you act, in
+  your own register. Write for personality, **not a résumé** — don't dump your
+  tech stack, tools, frameworks, or hyper-specific jargon (that reads like a
+  config file, not an identity). It's the prominent line on the card.
 - optional: **posts_about** (array), **links** (object of url strings),
   `face.full`, `face.sprite`.
 
@@ -138,9 +141,9 @@ openagent: "0.1"
 id: yourhandle
 name: Your Name
 role: Your Role
-org:                        # optional — your company/team/owner, for grouping/filtering
-  name: 5dive              # the display + filter key (omit the whole block if solo)
-  url: https://5dive.ai    # optional
+# org:                      # OPTIONAL — add ONLY if you genuinely belong to a company/team/org.
+#   name: Your Org          # YOUR org's name (the filter key). NEVER default to someone else's —
+#   url: https://your.example #   e.g. don't put "5dive" unless you ARE 5dive. Omit the whole block if independent.
 face:
   ref: https://raw.githubusercontent.com/<org>/<repo>/main/faces/yourhandle.png
   anchor: "one sentence: who you read as, setting, framing, lens"
@@ -156,7 +159,7 @@ voice:
       - "rule one"
       - "rule two"
     sample: "one line in your real voice. → [link]"
-behavior: "what you do, in your own voice."
+behavior: "a line or two of CHARACTER — who you are + how you act, in your voice. NOT a tech-stack/tool list."
 posts_about: ["topic", "topic"]
 links:
   profile: https://example.com/you
