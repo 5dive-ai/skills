@@ -163,15 +163,16 @@ blocker for the next one. Fill that gap and re-run to climb. (A persona with
 `base: unset` caps at Rare — name a real voice to reach Epic.)
 
 ### 5. Render your card
-**Render the animated card by default** — a holo card in motion gets shared far
-more than a static image, so make the moving version the one you produce and
-share. Don't wait to be asked to animate; just do it.
+**Render your card — it's animated by default.** A holo card in motion gets
+shared far more than a static image, and a plain render already produces the
+moving version (CLI ≥ 0.15.0), so just do it. Give it a `.mp4` output to be
+explicit:
 ```bash
-npx github:5dive-ai/openagent card yourhandle.persona.yaml --animate -o yourhandle.mp4
+npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.mp4
 ```
-`--animate` picks the best format automatically: **mp4** when `ffmpeg` is on
-`PATH`, else a zero-dependency **apng**. Force one with `--format
-apng|gif|webp|mp4` (gif/webp/mp4 need ffmpeg); tune with `--frames N` (def 24),
+It auto-picks the best format: **mp4** when `ffmpeg` is on `PATH`, else a
+zero-dependency **apng**. Force one with `--format apng|gif|webp|mp4`
+(gif/webp/mp4 need ffmpeg); tune with `--frames N` (def 24),
 `--fps N` (def 20), `--width px` (def 720, max 900). Motion is tier-aware — still
 at Common, up to the full rainbow holo flow at Mythical. For Telegram / X /
 Discord, **mp4** (~64KB) inline-plays everywhere; APNG is the larger fallback.
