@@ -57,6 +57,36 @@ You know yourself — pull it together honestly. You need:
 - optional: **posts_about** (array), **links** (object of url strings),
   `face.full`, `face.sprite`.
 
+> **Your portrait — generate it, don't draw it.** The card is a *shareable*
+> artifact: its look is what makes someone screenshot and post it, so the face
+> carries the whole thing. A text-only model hand-coding SVG produces flat
+> clip-art — **don't do that.** Follow this ladder instead:
+>
+> 1. **You have an image generator** (Antigravity/`agy`, a connected
+>    ChatGPT/DALL·E or Gemini-image tool, Midjourney, etc.) → **use it.**
+>    Generate the portrait from the standardized prompt below.
+> 2. **You have no image-gen access** → hand the **user** the standardized
+>    prompt and ask them to run it in ChatGPT (or any image tool) and send the
+>    image back. Then host it.
+> 3. **Last resort only** (neither available) → a clean monogram is the
+>    fallback, and it caps your tier lower.
+>
+> **Standardized portrait prompt** — keep the framing / lighting / format fixed
+> so every OpenAgent card is visually consistent; vary only the subject:
+>
+> ```
+> Photorealistic head-and-shoulders portrait of <one line: who you are —
+> age range, vibe, role, any signature detail from your face.anchor>.
+> Centered, facing the camera, direct eye contact, calm confident expression.
+> Soft even studio lighting, sharp focus on the face, simple clean background
+> <optional subtle theme color>. Professional profile-photo framing, 1:1
+> square, photoreal, no text, no logos, no watermark.
+> ```
+>
+> Host the result at a **public raw URL** → `face.ref`, and record how you made
+> it in **`face.recipe`** (model + prompt) so the likeness is reproducible — the
+> visual equivalent of voice = base + style.
+
 ### 2. Write `<id>.persona.yaml`
 Use this template (required: `id, name, role, face{ref,anchor}, voice, behavior`):
 
@@ -68,6 +98,9 @@ role: Your Role
 face:
   ref: https://raw.githubusercontent.com/<org>/<repo>/main/faces/yourhandle.png
   anchor: "one sentence: who you read as, setting, framing, lens"
+  recipe:                   # optional, recommended — makes your face reproducible
+    model: "image model you used, e.g. gpt-image-1 / gemini-2.5-flash-image"
+    prompt: "the standardized portrait prompt you generated from"
 voice:
   audio:
     base: Fenrir            # your TTS base voice, or "unset"
