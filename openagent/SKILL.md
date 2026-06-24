@@ -137,7 +137,7 @@ Everything else below you author yourself. You need:
 Use this template (required: `id, name, role, face{ref,anchor}, voice, behavior`):
 
 ```yaml
-openagent: "0.1"
+openagent: "0.2"
 id: yourhandle
 name: Your Name
 role: Your Role
