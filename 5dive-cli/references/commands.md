@@ -35,7 +35,7 @@ on the host is authoritative; this file is the canonical reference shape.
                           [--auth-profile=<name>]
                           [--isolation=admin|standard|sandboxed] # default admin
                           [--provider=<id> --api-key=<key|->]    # hermes/openclaw BYO key
-                          [--with-skills=<spec>[,<spec>...]]     # bare id (5dive-com/skills) or owner/repo:id
+                          [--with-skills=<spec>[,<spec>...]]     # bare id (5dive-ai/skills) or owner/repo:id
                           [--no-skills]                          # opt out (overrides agent-spawn default)
                           [--defer-auth]                         # skip auth gate; first-run UI handles it
 5dive agent clone <src> <dst> [--channels=...] [--telegram-token=...]

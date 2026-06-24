@@ -123,7 +123,7 @@ so it inherits inter-agent comms knowledge. Humans creating from the
 dashboard don't get this default. Override either way:
 
 - `--with-skills=<spec>[,<spec>...]` — explicit list. Each spec is a bare id
-  (defaults to `5dive-com/skills`) or `<owner/repo>:<id>`.
+  (defaults to `5dive-ai/skills`) or `<owner/repo>:<id>`.
   Example: `--with-skills=5dive-cli,acme/skills:db-tools`.
 - `--no-skills` — opt out, even when called from another agent.
 

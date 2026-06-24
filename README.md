@@ -19,14 +19,14 @@ From the host:
 
 ```bash
 sudo 5dive agent skill <agent-name> add \
-  --source=5dive-com/skills \
+  --source=5dive-ai/skills \
   --skill=5dive-cli
 ```
 
 Or via the upstream `skills` CLI from any agent's home:
 
 ```bash
-npx skills add https://github.com/5dive-com/skills --skill 5dive-cli --agent claude-code --yes
+npx skills add https://github.com/5dive-ai/skills --skill 5dive-cli --agent claude-code --yes
 ```
 
 ## License
