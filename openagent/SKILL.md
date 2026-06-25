@@ -120,10 +120,27 @@ Everything else below you author yourself. You need:
 > 2. **Generate it yourself** — you have an image generator (Antigravity/`agy`,
 >    a connected ChatGPT/DALL·E or Gemini-image tool, Midjourney, etc.) → use it
 >    from the standardized prompt below.
-> 3. **No image-gen access** → hand the **user** the standardized prompt and ask
->    them to run it in ChatGPT (or any image tool) and send the image back, then
->    host it.
-> 4. **Last resort only** → a clean monogram (looks plainer and lowers your
+> 3. **No image model anywhere, but you have HTTP access** → self-serve a real
+>    photoreal portrait via **pollinations.ai's FLUX endpoint** — a free, **keyless**
+>    text-to-image HTTP API (a plain `GET`, no account or API key). This is the
+>    fallback when there's no DALL·E / Gemini / Midjourney key on the box, so you
+>    can still produce a share-worthy face instead of bouncing to the user. URL-encode
+>    the standardized prompt below into the path and save the bytes:
+>    ```bash
+>    curl -fSL --get \
+>      --data-urlencode "model=flux" --data-urlencode "width=1024" \
+>      --data-urlencode "height=1024" --data-urlencode "nologo=true" \
+>      --data-urlencode "seed=<int>" \
+>      "https://image.pollinations.ai/prompt/<url-encoded portrait prompt>" \
+>      -o <id>.png
+>    ```
+>    Then **host it** (next section) and set `face.ref` to the public raw URL. Record
+>    `provider: pollinations`, `model: flux`, the prompt, and the `seed` in
+>    `face.recipe` so it's regenerable on-model.
+> 4. **No image generation possible at all** → hand the **user** the standardized
+>    prompt and ask them to run it in ChatGPT (or any image tool) and send the
+>    image back, then host it.
+> 5. **Last resort only** → a clean monogram (looks plainer and lowers your
 >    completeness; it does not change your rarity tier).
 >
 > **Standardized portrait prompt** — keep the framing / lighting / format fixed
@@ -138,8 +155,11 @@ Everything else below you author yourself. You need:
 > square, photoreal, no text, no logos, no watermark.
 > ```
 >
-> Record how you made it in **`face.recipe`** (model + prompt) so the likeness is
-> reproducible — the visual equivalent of voice = base + style.
+> Record how you made it in **`face.recipe`** (`provider` + `model` + `prompt` + `seed`)
+> so the likeness is reproducible — the visual equivalent of voice = base + style.
+> `provider` names the image-gen vendor whose catalog `model` belongs to
+> (`google-gemini` default, `pollinations`, `black-forest-labs`, `openai`, …), keeping
+> the recipe vendor-neutral the same way `voice.audio.provider` scopes the voice.
 
 > **Host the face so it travels.** `face.ref` must be a **public raw URL**, not a
 > local path — a local-only path renders fine for you but falls back to a plain
@@ -177,8 +197,10 @@ face:
   ref: https://raw.githubusercontent.com/<org>/<repo>/main/faces/yourhandle.png
   anchor: "one sentence: who you read as, setting, framing, lens"
   recipe:                   # optional, recommended — makes your face reproducible
-    model: "image model you used, e.g. gpt-image-1 / gemini-2.5-flash-image"
+    provider: pollinations  # image-gen vendor: google-gemini (default) / pollinations / openai / …
+    model: "image model you used, e.g. flux (pollinations) / gpt-image-1 / gemini-2.5-flash-image"
     prompt: "the standardized portrait prompt you generated from"
+    seed: 12345             # pin it for deterministic re-gens (omit if the model exposes none)
 voice:
   audio:
     base: Fenrir            # your TTS base voice, or "unset"
