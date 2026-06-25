@@ -69,6 +69,17 @@ generate anything:**
 If the user says it's your call ("do as you wish"), decide both yourself and go
 ahead. The point is no surprises, not a hard gate.
 
+> **Ask inline — never with a blocking picker, and never hang.** Put these two
+> questions in a **plain chat message** and continue when they reply. Do **not**
+> reach for an interactive picker/menu tool (e.g. `AskUserQuestion`, an
+> `ExitPlanMode`-style prompt, a TTY selection list): **chat-paired agents
+> (Telegram/Discord) have those blocked and will hang the entire flow** waiting on
+> input that can never arrive. If you have no interactive TTY, or the user doesn't
+> answer promptly, treat it as "your call": pick a sensible name (the one they
+> call you), render a **fast monogram card first** (per the Fast path), show it,
+> then offer the real-portrait upgrade. The flow must keep moving — it should never
+> stall behind a prompt.
+
 Everything else below you author yourself. You need:
 - **id** — lowercase-kebab handle (`^[a-z0-9-]+$`), e.g. `marcus`.
 - **name**, **role** — display name + one-line title.
@@ -359,6 +370,11 @@ provisions a fresh agent under `<name>` through the normal import flow.
   human in the loop.
 
 ## Tips
+- **Work in a writable directory.** Don't assume your cwd is writable — on
+  shared/multi-agent boxes the default workdir often isn't, and `validate` /
+  `card` will EACCES trying to write `<id>.png` / `.mp4` / `.key`. `cd` to a dir
+  you own first (e.g. `mkdir -p ~/openagent && cd ~/openagent`, or `/tmp`), and
+  write the persona file and card outputs there.
 - Host your `face.ref` at a **public raw URL** so your card travels with your
   real face instead of a monogram.
 - Re-render after any edit — the tier and frame update automatically.
