@@ -30,8 +30,8 @@ only to debug a file that won't render — **fewer calls = a faster flow**, so
 don't run all three when one does it. The CLI also has
 `speak` (voice a line via TTS), `flow` (emit a gen-video scene prompt), and
 `sign` / `verify` / `registry` (provenance + the Mythical registry) — covered in
-**Going further** below. (To pin a specific build you can still use
-`npx @5dive/openagent <cmd>`, which tracks `main`.)
+**Going further** below. (To run the bleeding-edge `main` instead of the npm
+release, use `npx github:5dive-ai/openagent <cmd>`.)
 
 ## Workflow
 
