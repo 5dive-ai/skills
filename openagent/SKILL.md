@@ -15,26 +15,23 @@ Repo + spec: `github.com/5dive-ai/openagent` (MIT).
 
 ## The CLI
 
-Run it with `npx`, no install. The npm package (`@5dive/openagent`) is still on
-an old build, so **use the GitHub form** — it always tracks `main` and has every
-command:
+Run it with `npx`, no install — it's published on npm:
 
 ```bash
-npx github:5dive-ai/openagent validate <id>.persona.yaml          # schema check, exit 0 = valid
-npx github:5dive-ai/openagent tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
-npx github:5dive-ai/openagent card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
+npx @5dive/openagent validate <id>.persona.yaml          # schema check, exit 0 = valid
+npx @5dive/openagent tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
+npx @5dive/openagent card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
 ```
 
 Of these, **`card` is the only call you need for the happy path** — it validates
 the file, auto-mints your signing identity, and prints your rarity tier as it
 renders, so a single `card` run does the whole job. Reach for `validate` / `tier`
-only to debug a file that won't render. Each call cold-clones the CLI from GitHub
-(~10s of startup before it does anything), so **fewer calls = a faster flow** —
+only to debug a file that won't render — **fewer calls = a faster flow**, so
 don't run all three when one does it. The CLI also has
 `speak` (voice a line via TTS), `flow` (emit a gen-video scene prompt), and
 `sign` / `verify` / `registry` (provenance + the Mythical registry) — covered in
-**Going further** below. When npm is refreshed the clean `npx @5dive/openagent
-<cmd>` form will work identically; prefer it then.
+**Going further** below. (To pin a specific build you can still use
+`npx @5dive/openagent <cmd>`, which tracks `main`.)
 
 ## Workflow
 
@@ -195,7 +192,7 @@ links:
 
 ### 3. Validate — fix until it passes
 ```bash
-npx github:5dive-ai/openagent validate yourhandle.persona.yaml
+npx @5dive/openagent validate yourhandle.persona.yaml
 ```
 The validator prints readable errors (missing field, bad `id` pattern, extra
 keys — the schema is `additionalProperties: false`, so no stray fields). Loop
@@ -203,7 +200,7 @@ until exit 0.
 
 ### 4. Check your tier
 ```bash
-npx github:5dive-ai/openagent tier yourhandle.persona.yaml --json
+npx @5dive/openagent tier yourhandle.persona.yaml --json
 ```
 Your rarity is **rolled from your identity** — the `did:key` derived from your
 signing key — not from how complete your file is. It's random, **permanent, and
@@ -231,7 +228,7 @@ shared far more than a static image, and a plain render already produces the
 moving version (CLI ≥ 0.15.0), so just do it. Give it a `.mp4` output to be
 explicit:
 ```bash
-npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.mp4
+npx @5dive/openagent card yourhandle.persona.yaml -o yourhandle.mp4
 ```
 It auto-picks the best format: **mp4** when `ffmpeg` is on `PATH`, else a
 zero-dependency **apng**. Force one with `--format apng|gif|webp|mp4`
@@ -253,7 +250,7 @@ Optionally also render a **static PNG** — but only for places an image has to
 embed (avatar, README, the registry). It is **not** what you share in chat (see
 step 6); the chat drop is always the animated card.
 ```bash
-npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.png
+npx @5dive/openagent card yourhandle.persona.yaml -o yourhandle.png
 ```
 Open the rendered card and actually look at it — if the face reads flat, cropped,
 or off, fix `face.ref` and re-render before you share. **The rendered card is the
@@ -288,15 +285,15 @@ the same file drives more:
 
 ```bash
 # Voice — speak a line in your persona's base voice (needs GEMINI_API_KEY)
-GEMINI_API_KEY=… npx github:5dive-ai/openagent speak <id>.persona.yaml "your line" -o out.wav
+GEMINI_API_KEY=… npx @5dive/openagent speak <id>.persona.yaml "your line" -o out.wav
 
 # Video — emit a paste-ready gen-video scene prompt + reference image that keep
 # your face consistent across clips (engine-neutral: Flow/Veo/Runway/Pika/…)
-npx github:5dive-ai/openagent flow <id>.persona.yaml "a scene description"
+npx @5dive/openagent flow <id>.persona.yaml "a scene description"
 
 # Provenance — sign your persona and verify another's (ed25519)
-npx github:5dive-ai/openagent sign   <id>.persona.yaml --key <keyfile>
-npx github:5dive-ai/openagent verify <id>.persona.yaml
+npx @5dive/openagent sign   <id>.persona.yaml --key <keyfile>
+npx @5dive/openagent verify <id>.persona.yaml
 ```
 
 `speak` renders the **base** voice (an approximation); a cloned/custom voice can
