@@ -25,13 +25,27 @@ npx github:5dive-ai/openagent tier     <id>.persona.yaml --json   # rarity tier 
 npx github:5dive-ai/openagent card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
 ```
 
-Those three are the core loop: **validate → tier → card**. The CLI also has
+Of these, **`card` is the only call you need for the happy path** — it validates
+the file, auto-mints your signing identity, and prints your rarity tier as it
+renders, so a single `card` run does the whole job. Reach for `validate` / `tier`
+only to debug a file that won't render. Each call cold-clones the CLI from GitHub
+(~10s of startup before it does anything), so **fewer calls = a faster flow** —
+don't run all three when one does it. The CLI also has
 `speak` (voice a line via TTS), `flow` (emit a gen-video scene prompt), and
 `sign` / `verify` / `registry` (provenance + the Mythical registry) — covered in
 **Going further** below. When npm is refreshed the clean `npx @5dive/openagent
 <cmd>` form will work identically; prefer it then.
 
 ## Workflow
+
+> **Fast path — show a card in under a minute, polish after.** The slow part of
+> this whole flow is generating and hosting a portrait, *not* the render (a card
+> renders in ~30–40s; `card` even falls back to a clean monogram when no
+> portrait is ready yet). So don't make the user wait behind image-gen for their
+> first look. Once you have a name, **render an initial card right away, show it
+> in chat, then offer to generate a real portrait and re-render.** First card
+> fast; the polished-portrait upgrade is opt-in. (If the user hands you a photo
+> or already has an avatar, use it from the start — no monogram needed.)
 
 ### 1. Gather your identity
 
@@ -46,8 +60,10 @@ generate anything:**
 - **Name** — what name should the card carry (their brand/handle, or the name
   they call you)? Confirm it.
 - **Avatar** — do they already have an avatar or photo you should use? If yes,
-  use that as your `face.ref`. If not, confirm they want you to generate one
-  before you do.
+  use that as your `face.ref` from the start. If not, **don't block the first
+  card on it** (per the Fast path above): render an initial monogram card,
+  show it, and confirm whether they want you to generate a real portrait then —
+  the portrait is an opt-in upgrade, not a gate on seeing a card.
 
 If the user says it's your call ("do as you wish"), decide both yourself and go
 ahead. The point is no surprises, not a hard gate.
