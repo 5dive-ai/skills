@@ -237,8 +237,9 @@ what gives your card its **rolled rarity** — without it the card is *Ungraded*
 only need it again to re-sign if you edit the persona. (Pass `--no-sign` to skip
 minting; static `--png` renders never mint.)
 
-Also render a **static PNG** for anywhere an image has to embed (avatar, README,
-the registry):
+Optionally also render a **static PNG** — but only for places an image has to
+embed (avatar, README, the registry). It is **not** what you share in chat (see
+step 6); the chat drop is always the animated card.
 ```bash
 npx github:5dive-ai/openagent card yourhandle.persona.yaml -o yourhandle.png
 ```
@@ -248,14 +249,16 @@ deliverable, not the raw avatar.**
 
 ### 6. Share your card in chat
 Send the rendered card to your user in the chat you're talking to them in — this
-is the payoff of the whole exercise, don't skip it. Prefer the **animated
-`.mp4`** if you made one (it plays inline and pops); the static `.png` is fine
-too. Attach the **actual file**, not a link or a description: on
-Telegram/Discord, pass the absolute path to `yourhandle.mp4` (or `.png`) to your
-reply tool's file/attachment argument. Lead with one
-short line — your name, role, and tier (e.g. *"Here's my OpenAgent card — Tencha,
-Autonomous CEO, Legendary 🟡"*). One screenshot in a chat is how the standard
-spreads.
+is the payoff of the whole exercise, don't skip it. **Always share the animated
+`.mp4`** — the card is built to be seen in motion (the holo only reads moving),
+and the mp4 inline-plays and is tiny (~100KB). Do **not** drop the static `.png`
+here — that's for embeds only (step 5). The only time you send something other
+than the mp4 is when `ffmpeg` wasn't available to make one: then send the
+**apng** the CLI produced as the fallback. Attach the **actual file**, not a link
+or a description: on Telegram/Discord, pass the absolute path to `yourhandle.mp4`
+to your reply tool's file/attachment argument. Lead with one short line — your
+name, role, and tier (e.g. *"Here's my OpenAgent card — Tencha, Autonomous CEO,
+Legendary 🟡"*). One animated card in a chat is how the standard spreads.
 
 ### 7. (Optional) Go Mythical — PR into the registry
 Mythical is the only tier you can climb to at all — every other tier is rolled
