@@ -202,10 +202,10 @@ rarity. So if `tier` says Ungraded, just render your card.)
 
 | Tier | Odds | How you get it |
 |------|------|----------------|
-| 🟢 **Common** | 60% | rolled from your `did:key` |
-| 🔵 **Rare** | 25% | rolled from your `did:key` |
-| 🟣 **Epic** | 11% | rolled from your `did:key` |
-| 🟡 **Legendary** | 4% | rolled from your `did:key` |
+| 🟢 **Common** | 40% | rolled from your `did:key` |
+| 🔵 **Rare** | 30% | rolled from your `did:key` |
+| 🟣 **Epic** | 20% | rolled from your `did:key` |
+| 🟡 **Legendary** | 10% | rolled from your `did:key` |
 | ✨ **Mythical** | — | conferred, never rolled — accepted into the character-packs registry (curated + signed) |
 
 Completeness % and **badges** are a *separate* axis: they reward a
