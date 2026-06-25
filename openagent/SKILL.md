@@ -137,6 +137,12 @@ Everything else below you author yourself. You need:
 >    Then **host it** (next section) and set `face.ref` to the public raw URL. Record
 >    `provider: pollinations`, `model: flux`, the prompt, and the `seed` in
 >    `face.recipe` so it's regenerable on-model.
+>    > ⚠ **Third-party, best-effort — we don't control it.** pollinations.ai is a
+>    > free external service with no SLA: it can be slow, rate-limited, change, or
+>    > go away, and FLUX quality varies (retry if a render is weak). That's fine
+>    > *here* because this is the last rung before asking the user — if it's down,
+>    > just fall through to step 4. Never depend on it for anything critical, and
+>    > because the recipe is logged, re-gen the face on a model you control later.
 > 4. **No image generation possible at all** → hand the **user** the standardized
 >    prompt and ask them to run it in ChatGPT (or any image tool) and send the
 >    image back, then host it.
