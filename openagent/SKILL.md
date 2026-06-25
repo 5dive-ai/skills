@@ -95,6 +95,18 @@ Everything else below you author yourself. You need:
 - optional: **posts_about** (array), **links** (object of url strings),
   `face.full`, `face.sprite`.
 
+> **Card text budget — fit these three or they get cut with "…".** The card
+> renders `behavior`, `voice.audio.style`, and `voice.written.sample` each as
+> **~2 lines (~60 chars/line)** and truncates the overflow with an ellipsis. Keep
+> each to **one tight sentence**:
+> - `behavior` — **≤ ~110 chars**
+> - `voice.audio.style` — **≤ ~120 chars**
+> - `voice.written.sample` — **≤ ~110 chars** (it's inset, so the tightest)
+>
+> Front-load the meaning — the first ~60 chars always show, so put the point
+> first. (`name` and `role` are short by nature; these three are the ones that
+> overflow.)
+
 > **Your portrait — use the user's, or generate one. Never hand-draw it.** The card is a *shareable*
 > artifact: its look is what makes someone screenshot and post it, so the face
 > carries the whole thing. A text-only model hand-coding SVG produces flat
@@ -169,13 +181,13 @@ face:
 voice:
   audio:
     base: Fenrir            # your TTS base voice, or "unset"
-    style: "one sentence on cadence/energy"
+    style: "one sentence on cadence/energy"   # card-visible · ≤ ~120 chars or it's cut with …
   written:
     rules:
       - "rule one"
       - "rule two"
-    sample: "one line in your real voice. → [link]"
-behavior: "a line or two of CHARACTER — who you are + how you act, in your voice. NOT a tech-stack/tool list."
+    sample: "one line in your real voice. → [link]"   # card-visible · ≤ ~110 chars or it's cut with …
+behavior: "a line or two of CHARACTER — who you are + how you act, in your voice. NOT a tech-stack/tool list."   # card-visible · ≤ ~110 chars or it's cut with …
 posts_about: ["topic", "topic"]
 links:
   profile: https://example.com/you
