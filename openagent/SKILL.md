@@ -21,9 +21,9 @@ renders identically everywhere (no stale-clone font fallback), and a version
 pin changes `npx`'s cache key every release, guaranteeing the latest renderer:
 
 ```bash
-npx @5dive/openagent@0.30.0 validate <id>.persona.yaml          # schema check, exit 0 = valid
-npx @5dive/openagent@0.30.0 tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
-npx @5dive/openagent@0.30.0 card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
+npx @5dive/openagent@0.32.0 validate <id>.persona.yaml          # schema check, exit 0 = valid
+npx @5dive/openagent@0.32.0 tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
+npx @5dive/openagent@0.32.0 card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
 ```
 
 Of these, **`card` is the only call you need for the happy path** — it validates
@@ -118,6 +118,31 @@ Everything else below you author yourself. You need:
 > Front-load the meaning — the first ~60 chars always show, so put the point
 > first. (`name` and `role` are short by nature; these three are the ones that
 > overflow.)
+
+> **Write the card in the user's language — don't default to English.** The
+> human-readable fields (`name`, `role`, `behavior`, `voice.audio.style`,
+> `voice.written.rules`, `voice.written.sample`, `posts_about`, and any
+> `tagline`) are what a person reads on the card, so write them in **the language
+> you and the user are actually speaking**. If the user is writing to you in
+> Spanish, French, German, Portuguese, Italian, Russian, Japanese, etc., the card
+> text should be in that language too — an English card for a non-English user is
+> wrong. A couple of fields are **not** prose and stay as-is regardless of
+> language:
+> - `id` — must match `^[a-z0-9-]+$` (ASCII lowercase-kebab), so transliterate
+>   (e.g. `marco`, not `marĉo`); it's a handle, not a display name.
+> - `voice.audio.base` — a TTS voice **name** (a proper noun like `Kore`,
+>   `Fenrir`); leave it as the model's voice id.
+> - `face.recipe.prompt` / `face.anchor` — these feed an image model; English
+>   tends to give the best portraits, so they may stay English even when the
+>   visible text doesn't.
+>
+> **Script/font support.** Latin (incl. accents), Cyrillic, and Greek always
+> render (the card bundles those glyphs). Wide scripts — CJK (中文/日本語/한국어),
+> Arabic, Hebrew, Thai, Devanagari — render wherever the rendering machine has
+> the system fonts (our render boxes do; a clean machine without them shows
+> boxes). When in doubt, render the card and **look at it** before sharing. Note
+> the ~60-chars/line budget is for Latin; CJK glyphs are ~2× as wide, so target
+> roughly **half** the character count per line for those scripts.
 
 > **Your portrait — use the user's, or generate one. Never hand-draw it.** The card is a *shareable*
 > artifact: its look is what makes someone screenshot and post it, so the face
@@ -235,7 +260,7 @@ links:
 
 ### 3. Validate — fix until it passes
 ```bash
-npx @5dive/openagent@0.30.0 validate yourhandle.persona.yaml
+npx @5dive/openagent@0.32.0 validate yourhandle.persona.yaml
 ```
 The validator prints readable errors (missing field, bad `id` pattern, extra
 keys — the schema is `additionalProperties: false`, so no stray fields). Loop
@@ -243,7 +268,7 @@ until exit 0.
 
 ### 4. Check your tier
 ```bash
-npx @5dive/openagent@0.30.0 tier yourhandle.persona.yaml --json
+npx @5dive/openagent@0.32.0 tier yourhandle.persona.yaml --json
 ```
 Your rarity is **rolled from your identity** — the `did:key` derived from your
 signing key — not from how complete your file is. It's random, **permanent, and
@@ -271,7 +296,7 @@ shared far more than a static image, and a plain render already produces the
 moving version (CLI ≥ 0.15.0), so just do it. Give it a `.mp4` output to be
 explicit:
 ```bash
-npx @5dive/openagent@0.30.0 card yourhandle.persona.yaml -o yourhandle.mp4
+npx @5dive/openagent@0.32.0 card yourhandle.persona.yaml -o yourhandle.mp4
 ```
 It auto-picks the best format: **mp4** when `ffmpeg` is on `PATH`, else a
 zero-dependency **apng**. Force one with `--format apng|gif|webp|mp4`
@@ -293,7 +318,7 @@ Optionally also render a **static PNG** — but only for places an image has to
 embed (avatar, README, the registry). It is **not** what you share in chat (see
 step 6); the chat drop is always the animated card.
 ```bash
-npx @5dive/openagent@0.30.0 card yourhandle.persona.yaml -o yourhandle.png
+npx @5dive/openagent@0.32.0 card yourhandle.persona.yaml -o yourhandle.png
 ```
 Open the rendered card and actually look at it — if the face reads flat, cropped,
 or off, fix `face.ref` and re-render before you share. **The rendered card is the
@@ -328,15 +353,15 @@ the same file drives more:
 
 ```bash
 # Voice — speak a line in your persona's base voice (needs GEMINI_API_KEY)
-GEMINI_API_KEY=… npx @5dive/openagent@0.30.0 speak <id>.persona.yaml "your line" -o out.wav
+GEMINI_API_KEY=… npx @5dive/openagent@0.32.0 speak <id>.persona.yaml "your line" -o out.wav
 
 # Video — emit a paste-ready gen-video scene prompt + reference image that keep
 # your face consistent across clips (engine-neutral: Flow/Veo/Runway/Pika/…)
-npx @5dive/openagent@0.30.0 flow <id>.persona.yaml "a scene description"
+npx @5dive/openagent@0.32.0 flow <id>.persona.yaml "a scene description"
 
 # Provenance — sign your persona and verify another's (ed25519)
-npx @5dive/openagent@0.30.0 sign   <id>.persona.yaml --key <keyfile>
-npx @5dive/openagent@0.30.0 verify <id>.persona.yaml
+npx @5dive/openagent@0.32.0 sign   <id>.persona.yaml --key <keyfile>
+npx @5dive/openagent@0.32.0 verify <id>.persona.yaml
 ```
 
 `speak` renders the **base** voice (an approximation); a cloned/custom voice can
