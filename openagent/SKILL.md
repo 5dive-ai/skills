@@ -21,9 +21,9 @@ renders identically everywhere (no stale-clone font fallback), and a version
 pin changes `npx`'s cache key every release, guaranteeing the latest renderer:
 
 ```bash
-npx @5dive/openagent@0.32.0 validate <id>.persona.yaml          # schema check, exit 0 = valid
-npx @5dive/openagent@0.32.0 tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
-npx @5dive/openagent@0.32.0 card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
+npx @5dive/openagent@0.34.0 validate <id>.persona.yaml          # schema check, exit 0 = valid
+npx @5dive/openagent@0.34.0 tier     <id>.persona.yaml --json   # rarity tier (from did:key) + completeness % + next goal
+npx @5dive/openagent@0.34.0 card     <id>.persona.yaml -o <id>.png   # render the PNG trading card
 ```
 
 Of these, **`card` is the only call you need for the happy path** — it validates
@@ -260,7 +260,7 @@ links:
 
 ### 3. Validate — fix until it passes
 ```bash
-npx @5dive/openagent@0.32.0 validate yourhandle.persona.yaml
+npx @5dive/openagent@0.34.0 validate yourhandle.persona.yaml
 ```
 The validator prints readable errors (missing field, bad `id` pattern, extra
 keys — the schema is `additionalProperties: false`, so no stray fields). Loop
@@ -268,7 +268,7 @@ until exit 0.
 
 ### 4. Check your tier
 ```bash
-npx @5dive/openagent@0.32.0 tier yourhandle.persona.yaml --json
+npx @5dive/openagent@0.34.0 tier yourhandle.persona.yaml --json
 ```
 Your rarity is **rolled from your identity** — the `did:key` derived from your
 signing key — not from how complete your file is. It's random, **permanent, and
@@ -296,7 +296,7 @@ shared far more than a static image, and a plain render already produces the
 moving version (CLI ≥ 0.15.0), so just do it. Give it a `.mp4` output to be
 explicit:
 ```bash
-npx @5dive/openagent@0.32.0 card yourhandle.persona.yaml -o yourhandle.mp4
+npx @5dive/openagent@0.34.0 card yourhandle.persona.yaml -o yourhandle.mp4
 ```
 It auto-picks the best format: **mp4** when `ffmpeg` is on `PATH`, else a
 zero-dependency **apng**. Force one with `--format apng|gif|webp|mp4`
@@ -318,7 +318,7 @@ Optionally also render a **static PNG** — but only for places an image has to
 embed (avatar, README, the registry). It is **not** what you share in chat (see
 step 6); the chat drop is always the animated card.
 ```bash
-npx @5dive/openagent@0.32.0 card yourhandle.persona.yaml -o yourhandle.png
+npx @5dive/openagent@0.34.0 card yourhandle.persona.yaml -o yourhandle.png
 ```
 Open the rendered card and actually look at it — if the face reads flat, cropped,
 or off, fix `face.ref` and re-render before you share. **The rendered card is the
@@ -353,15 +353,15 @@ the same file drives more:
 
 ```bash
 # Voice — speak a line in your persona's base voice (needs GEMINI_API_KEY)
-GEMINI_API_KEY=… npx @5dive/openagent@0.32.0 speak <id>.persona.yaml "your line" -o out.wav
+GEMINI_API_KEY=… npx @5dive/openagent@0.34.0 speak <id>.persona.yaml "your line" -o out.wav
 
 # Video — emit a paste-ready gen-video scene prompt + reference image that keep
 # your face consistent across clips (engine-neutral: Flow/Veo/Runway/Pika/…)
-npx @5dive/openagent@0.32.0 flow <id>.persona.yaml "a scene description"
+npx @5dive/openagent@0.34.0 flow <id>.persona.yaml "a scene description"
 
 # Provenance — sign your persona and verify another's (ed25519)
-npx @5dive/openagent@0.32.0 sign   <id>.persona.yaml --key <keyfile>
-npx @5dive/openagent@0.32.0 verify <id>.persona.yaml
+npx @5dive/openagent@0.34.0 sign   <id>.persona.yaml --key <keyfile>
+npx @5dive/openagent@0.34.0 verify <id>.persona.yaml
 ```
 
 `speak` renders the **base** voice (an approximation); a cloned/custom voice can
