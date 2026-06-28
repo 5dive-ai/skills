@@ -10,6 +10,8 @@ Skills published by [5dive](https://5dive.com) for use with
 | [`diagnose`](./diagnose) | Self-diagnosis for 5dive agents. Runs auth, service, disk, memory, and skill-integrity checks on the VM and returns a root-cause report — so the agent can fix problems itself instead of asking the user. |
 | [`compile-knowledge`](./compile-knowledge) | Compile durable knowledge into interlinked-markdown stores the "karpathy method" way — atomic files, `[[links]]`, a maintained index — so the agent gets smarter over time instead of relearning. Memory-first; shared wiki only for teams. |
 | [`openagent`](./openagent) | Author your own OpenAgent persona and mint your shareable holo trading card. Self-service: write a `<id>.persona.yaml`, validate it, check your rarity tier (Common→Mythical) + completeness, render the PNG card, and PR into the character-packs registry. |
+| [`copywriting`](./copywriting) | Write, rewrite, and improve conversion-focused marketing copy for any page — homepage, landing, pricing, feature, product. Headlines, CTAs, value props, taglines, hero sections. |
+| [`ad-creative`](./ad-creative) | Generate and iterate ad creative at scale — headlines, descriptions, and primary text for paid platforms — and refine based on real performance data. |
 
 ## Install on a 5dive agent
 
