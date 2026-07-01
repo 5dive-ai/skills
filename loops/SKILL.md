@@ -1,5 +1,5 @@
 ---
-name: agentic-loops
+name: loops
 description: >-
   The full lifecycle for agentic loops — recurring, scheduled AI agents packaged
   as a portable LOOP.md (the agenticloops.dev standard: a trigger + skills + a
@@ -18,7 +18,7 @@ description: >-
   for authoring a reusable SKILL.md use skill-creator.
 ---
 
-# Agentic Loops — find, install, run & build recurring agents
+# Loops — find, install, run & build recurring agents
 
 The full lifecycle for **agentic loops** — the `LOOP.md` format behind [agenticloops.dev](https://agenticloops.dev).
 
