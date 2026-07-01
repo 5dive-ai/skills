@@ -5,10 +5,13 @@ description: >-
   agenticloops.dev standard) that packs a trigger, skills, and a prompt into one
   file any harness can install and run on a schedule. Use this whenever the user
   wants to "create a loop", "make an agentic loop", "write a LOOP.md", "turn this
-  into a recurring agent", "scaffold or publish a loop", or describes a repeating
-  job they want an agent to do on a timer (a daily digest, a competitor watcher, a
-  triage sweep, a report pipeline) — even if they don't say the word "loop". This
-  is the loop-level analogue of skill-creator — it builds the LOOP.md, not a skill.
+  into a recurring agent", "scaffold or publish a loop", "schedule an agent", "set
+  up a cron job for an agent", or describes a repeating job they want an agent to
+  do on a timer (a daily digest, a competitor watcher, a triage sweep, a report
+  pipeline, "email me X every morning", "check Y every hour") — even if they never
+  say the word "loop". Trigger it for authoring, editing, validating, or publishing
+  any LOOP.md. This is the loop-level analogue of skill-creator — it builds the
+  LOOP.md, not a skill.
   For composing an ad-hoc in-session multi-agent run (spawn, verify, panel,
   fan-out) use the `loops` skill instead; for authoring a reusable SKILL.md use
   skill-creator.
