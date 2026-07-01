@@ -13,6 +13,7 @@ Skills published by [5dive](https://5dive.com) for use with
 | [`copywriting`](./copywriting) | Write, rewrite, and improve conversion-focused marketing copy for any page — homepage, landing, pricing, feature, product. Headlines, CTAs, value props, taglines, hero sections. |
 | [`ad-creative`](./ad-creative) | Generate and iterate ad creative at scale — headlines, descriptions, and primary text for paid platforms — and refine based on real performance data. |
 | [`loop-creator`](./loop-creator) | Author, validate, test, and publish an agentic loop — a portable [`LOOP.md`](https://agenticloops.dev) (trigger + skills + prompt in one file) any harness can install and run on a schedule. The loop-level analogue of `skill-creator`. |
+| [`find-loops`](./find-loops) | Discover, install, and run agentic loops from the [agenticloops.dev](https://agenticloops.dev) directory — search by job, vet by proof + `requires`, then install/run on your harness. The consumer side of `loop-creator`; the loop-level analogue of `find-skills`. |
 
 ## Install on a 5dive agent
 
