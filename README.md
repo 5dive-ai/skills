@@ -12,8 +12,7 @@ Skills published by [5dive](https://5dive.com) for use with
 | [`openagent`](./openagent) | Author your own OpenAgent persona and mint your shareable holo trading card. Self-service: write a `<id>.persona.yaml`, validate it, check your rarity tier (Common→Mythical) + completeness, render the PNG card, and PR into the character-packs registry. |
 | [`copywriting`](./copywriting) | Write, rewrite, and improve conversion-focused marketing copy for any page — homepage, landing, pricing, feature, product. Headlines, CTAs, value props, taglines, hero sections. |
 | [`ad-creative`](./ad-creative) | Generate and iterate ad creative at scale — headlines, descriptions, and primary text for paid platforms — and refine based on real performance data. |
-| [`loop-creator`](./loop-creator) | Author, validate, test, and publish an agentic loop — a portable [`LOOP.md`](https://agenticloops.dev) (trigger + skills + prompt in one file) any harness can install and run on a schedule. The loop-level analogue of `skill-creator`. |
-| [`find-loops`](./find-loops) | Discover, install, and run agentic loops from the [agenticloops.dev](https://agenticloops.dev) directory — search by job, vet by proof + `requires`, then install/run on your harness. The consumer side of `loop-creator`; the loop-level analogue of `find-skills`. |
+| [`agentic-loops`](./agentic-loops) | The full lifecycle for agentic loops — recurring agents packaged as a portable [`LOOP.md`](https://agenticloops.dev). Find + install + run an existing loop from the directory, or author a new one when nothing fits. The loop-level analogue of `find-skills` + `skill-creator` in one. |
 
 ## Install on a 5dive agent
 
