@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`) — or declarative fleets (`5dive up`, `5dive team import`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`) — declarative fleets (`5dive up`, `5dive team import`), or controlling agents on OTHER registered boxes (`5dive fleet`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
 ---
 
 # 5dive-cli
@@ -36,7 +36,13 @@ hands — for example:
   optional human gates), or set up an independent maker→verifier review —
   including building or editing one for the user on request (`task loop`).
 - You're blocked on something only a human can provide — a decision, a
-  secret, an approval (`5dive task need`).
+  secret, an approval (`5dive task need`), or a task should quietly wait
+  until a date (`task park --wake`).
+- You want to recall what the team already knows — past decisions, gotchas,
+  research — before re-deriving it (`5dive memory search`).
+- You need a read on the fleet: who's burning tokens (`5dive usage`), is any
+  agent stuck/crashlooping (`5dive supervisor`), what shipped in the last 24h
+  (`5dive digest`).
 
 If the user just wants you to do the work yourself, do not spawn an agent.
 
@@ -49,9 +55,11 @@ Everything the CLI does maps onto these resources on the host:
   running the chosen CLI in a restart loop.
 - Auth is decoupled. You authenticate a *type* once; every agent of that
   type inherits the credentials via `EnvironmentFile`.
-- A **channel** (`telegram` / `discord` / `none`) is the inbound message
-  surface. All agent types support channels; each agent needs its own bot
-  token.
+- A **channel** (`telegram` / `discord` / `dashboard` / `none`, comma-listable)
+  is the inbound message surface. All agent types support channels; each agent
+  needs its own bot token. `dashboard` (claude-only, token-free) is web-dashboard
+  chat and is folded into every claude create by default — `--channels=none`
+  opts out.
 - The CLI is idempotent and safe to call from another agent — your agent
   user is in the `claude` group and has `sudo 5dive ...` whitelisted.
 
@@ -114,6 +122,11 @@ sudo 5dive agent rm worker-1 --json
 
 `agent clone <src> <dst>` copies an existing agent's type/config into a new
 one — handy when you want a second worker shaped like the first.
+
+`5dive hire <name> [--role="CTO"] [--title=...]` is sugar for `agent create`
+(defaults `--type=claude`, forwards every create flag) plus an `org set` when
+`--role`/`--title` are given — one call to "hire a teammate" with an org-chart
+entry.
 
 #### Skill inheritance on agent-spawned children
 
@@ -298,6 +311,19 @@ To attach a bot to an agent **after** create:
 sudo 5dive agent config worker-1 set telegram.token=<bot-token>
 sudo 5dive agent config worker-1 set channels=telegram
 ```
+
+**Token hygiene: prefer stdin over argv.** Any token/key flag accepts the
+sentinel `-` to read the value from stdin, so it never lands in
+`/proc/<pid>/cmdline` or audit/access logs:
+
+```bash
+echo "$BOT_TOKEN" | sudo 5dive agent config worker-1 set telegram.token=-
+echo "$BOT_TOKEN" | sudo 5dive agent telegram-getme --token=-
+echo "$KEY"       | sudo 5dive agent auth set claude --api-key=-
+```
+
+Only one `=-` key can be read per invocation, and `=-` without anything piped
+blocks on stdin until your timeout — always actually pipe the value.
 
 Who may talk to the bot is governed by the agent's `access.json`. Read /
 write it without touching the file by hand (the plugin re-reads per message,
@@ -516,7 +542,7 @@ it and don't guess — gate it:
 ```bash
 5dive task need DIVE-12 --type=decision \
   --ask="Ship behind a flag or straight to prod?" \
-  --options="flag|prod" --recommend="flag" --json
+  --options="flag|prod" --recommend="flag" --tier=1 --json
 # --type: decision | secret | approval | manual
 # -> task goes blocked; the human gets an alert with tap buttons.
 
@@ -527,6 +553,33 @@ it and don't guess — gate it:
 Keep `--ask` to ONE crisp question with ~1 line of context; heavy detail
 belongs in the task body. Always pass `--recommend` for decision/approval —
 the alert leads with your recommendation so the human can one-tap it.
+
+**Risk tiers (`--tier=0|1|2`)** control how hard the gate blocks:
+
+- `0` — auto-clear: the recommendation applies immediately, no ping; the daily
+  digest's "Auto-cleared gates" section is the record. Requires `--recommend`.
+- `1` — pings normally, but if unanswered for 48h the recommendation is
+  auto-applied (provenance `auto:ttl`) and the owner notified. Default for
+  `decision`.
+- `2` — hard human gate, never auto-applies. Default for approval/secret/manual.
+
+Money, public comms, secrets, destructive and brand asks are **floored to
+tier 2** by the CLI regardless of the flag; secret gates are always tier 2.
+Use tier 0/1 for low-stakes reversible calls so humans only see gates that
+matter.
+
+**Quiet waits: `task park`.** When a task should sleep without sitting in the
+human inbox (revisit-later, waiting on an external date):
+
+```bash
+5dive task park DIVE-12 --reason="revisit after launch" --wake=+3d --json
+# --wake=<YYYY-MM-DD[ HH:MM]|+Nd|+Nh> auto-unparks it back to todo
+5dive task unpark DIVE-12 --json   # wake it early
+```
+
+**Flag for attention: `task escalate <id>`** bumps priority one tier (capped
+at urgent) and pings the owning agent + paired human — use it to raise urgency
+without filing a gate or reassigning.
 
 #### Recurring work + waking workers: heartbeat
 
@@ -576,6 +629,8 @@ you can.
 ]' --json
 
 5dive task loop ls --json        # board of loop runs: per-run step progress + status
+# Rows carry the latest grade scorecard per run: `scorecard_json` in --json
+# ('' when ungraded), a `score` column (84/100 style) on the text board.
 ```
 
 The relay creates one subtask per step, chained N+1-blocked-by-N under a run
@@ -601,11 +656,76 @@ For "do the work, then have someone independent check it," give a task a
 # -> bounces back to the maker for another pass; escalates to a human at --max-iters.
 
 5dive task loops --json          # board of maker→verifier loops (--stuck / --escalate-stuck)
+5dive task loops --runs --json   # LOOP-7 loop_runs control window: topology/stage/
+                                 # iteration/token-ceiling/status; --watch repaints,
+                                 # --kill <loopId> requests a deferred-safe stop
 ```
 
 `--verify="<cmd>"` stores a default command that `5dive task verify <id>` runs
 to grade automatically. Writer ≠ grader is the whole point — never set the
 verifier to the same agent as the assignee.
+
+### Search team memory before re-deriving
+
+`5dive memory search` is the read-path into the accumulated markdown memory —
+your own `~/.claude/projects/*/memory` stores plus the shared team wiki when
+the box has one. BM25-ranked snippets with file+heading provenance, capped at
+a token ceiling. Read-only, no sudo, nothing leaves the box.
+
+```bash
+5dive memory search "hetzner capacity gotchas" --json
+5dive memory search "deploy rollback" --limit=4 --max-tokens=800
+5dive memory search "auth" --roots=/path/a,/path/b   # override the default roots
+```
+
+Reach for it before re-deriving past decisions, debugging something a teammate
+already hit, or answering "have we seen this before?" — retrieval beats
+re-reading whole memory files into context.
+
+### Read the fleet: digest, usage, supervisor
+
+Three read-only surfaces, no agent reasoning, no tokens burned:
+
+```bash
+# Standup digest: shipped last 24h / in progress / open human gates /
+# auto-cleared gates / token burn / heartbeat health.
+5dive digest --json          # --7d widens the window
+sudo 5dive digest --send     # deliver to the paired Telegram chat
+sudo 5dive digest on --at=7  # opt in to daily auto-delivery (default OFF); off | status
+
+# Token burn, per agent / per task (subscription tokens, no dollars).
+5dive usage --json           # board: top agents + top tasks, 24h (--7d)
+5dive usage worker-1 --json  # one agent: per-model + per-task breakdown
+sudo 5dive usage budget set worker-1 --daily=2000000   # soft cap -> ⚠ on the board
+5dive usage loops --json     # spend rolled up per loop / topology
+
+# Fleet health board: per-agent state, classification (stuck/crashloop/idle),
+# cause, last activity. Observe-only — detects + classifies, NEVER auto-acts.
+sudo 5dive supervisor
+sudo 5dive supervisor --watch      # live repaint (default 5s)
+```
+
+Check `usage` (or `account usage` for rate-limit headroom) **before** blaming
+quota for a failure or moving agents between accounts; check `supervisor`
+before restarting an agent on a hunch.
+
+### Control other boxes: `5dive fleet`
+
+When the operation spans more than this VM, a fleet registry maps box names to
+SSH targets (references only — host/user/port + a path to a key, never key
+material). One view and one command surface over all of them:
+
+```bash
+sudo 5dive fleet add prod-2 --host=1.2.3.4 --key=/home/claude/.ssh/id_ed25519
+5dive fleet ls
+5dive fleet status --json          # per-box reachability + agent counts (parallel SSH)
+5dive fleet agents --json          # every agent across the fleet, one view
+5dive fleet send scout@prod-2 "status report please"
+5dive fleet restart scout@prod-2
+```
+
+One unreachable box never fails the whole view. `add`/`rm` need root;
+the read surfaces don't.
 
 ### Diagnose a sick host
 
