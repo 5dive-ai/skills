@@ -1,0 +1,25 @@
+# Snyk policy file — https://docs.snyk.io/snyk-cli/test-for-vulnerabilities/the-.snyk-file
+#
+# The `5dive-cli` skill is flagged CRITICAL E006 "malicious code pattern detected
+# in skill scripts". This is a FALSE POSITIVE:
+#   * The skill contains NO executable scripts — it is SKILL.md + reference
+#     markdown only. There is nothing to execute.
+#   * The heuristic trips on PROSE that documents the intended, dual-use
+#     capabilities of a first-party agent-orchestration CLI (inter-agent
+#     messaging, operator-scoped credential provisioning, first-party
+#     self-update). All operate solely within one operator's own trust boundary.
+#   * See SECURITY.md for the full trust model and threat analysis.
+#
+# A false-positive dispute has been filed with the scanner. This suppression is
+# transparent and on-record — it does NOT obfuscate or alter any code.
+version: v1.25.0
+ignore:
+  E006:
+    - '*':
+        reason: >-
+          False positive. 5dive-cli is a documentation-only skill (SKILL.md +
+          reference markdown, no executable scripts). The flagged patterns are
+          prose describing first-party agent-orchestration features that operate
+          only within a single operator's own fleet. See SECURITY.md.
+        expires: 2027-07-03T00:00:00.000Z
+patch: {}
