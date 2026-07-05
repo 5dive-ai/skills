@@ -63,6 +63,26 @@ than nothing; it pollutes recall.
 7. **Hygiene.** Delete files that turned out wrong. Convert relative dates to
    absolute. If the index is getting long, tighten lines — don't let it bloat.
 
+## Lifecycle — supersede, don't silently overwrite
+
+Facts rot. When one is time-sensitive, uncertain, or replaces an older one,
+stamp the envelope so recall can age it out instead of surfacing stale truth:
+
+- **`valid_to: YYYY-MM-DD`** — date the fact expires / needs a recheck. Past it,
+  recall keeps the fact but demotes + flags it `⚠ expired`.
+- **`supersedes: <slug>`** — when a new fact replaces an old one, point at the
+  old slug. The old fact is then demoted (`⤴ superseded`) in recall instead of
+  lingering as a second, contradictory answer. Prefer this over edit-in-place
+  when the OLD value is still worth seeing (audit trail); edit in place when it
+  isn't.
+- **`confidence: high|medium|low`** — low/medium facts are demoted so a hunch
+  never outranks a verified fact.
+- **`provenance: "<source>"`** — where the fact came from, distinct from
+  `compiled_by` (who wrote the note).
+
+`5dive memory add` writes these: `--valid-to=`, `--supersedes=`, `--confidence=`,
+`--provenance=`. All optional — omit them and behaviour is unchanged.
+
 ## Anti-patterns
 
 - A wall-of-text doc instead of atomic files.
