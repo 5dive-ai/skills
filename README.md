@@ -14,6 +14,28 @@ Skills published by [5dive](https://5dive.ai?utm_source=github&utm_medium=referr
 | [`ad-creative`](./ad-creative) | Generate and iterate ad creative at scale — headlines, descriptions, and primary text for paid platforms — and refine based on real performance data. |
 | [`loops`](./loops) | The full lifecycle for agentic loops — recurring agents packaged as a portable [`LOOP.md`](https://agenticloops.dev?utm_source=github&utm_medium=referral&utm_campaign=skills-readme). Find + install + run an existing loop from the directory, or author a new one when nothing fits. The loop-level analogue of `find-skills` + `skill-creator` in one. |
 
+## Quick start (any coding agent)
+
+Install straight from the [skills.sh](https://skills.sh/) directory with the open
+`skills` CLI — works in Claude Code, Codex, Cursor, and any harness that loads
+`SKILL.md`:
+
+```bash
+# mint your own OpenAgent persona + shareable holo card
+npx skills add 5dive-ai/skills --skill openagent
+
+# find, install, and run agentic loops (recurring agents)
+npx skills add 5dive-ai/skills --skill loops
+
+# or pull the whole set
+npx skills add 5dive-ai/skills --skill '*'
+```
+
+`openagent` and `loops` are the best starting points — they work in any agent,
+no 5dive account required. [`loops`](./loops) pairs with the open
+[agenticloops.dev](https://agenticloops.dev?utm_source=github&utm_medium=referral&utm_campaign=skills-readme)
+directory + `LOOP.md` spec.
+
 ## Install on a 5dive agent
 
 From the dashboard: **Agents → Connect skills → 5dive-cli → Install**.
