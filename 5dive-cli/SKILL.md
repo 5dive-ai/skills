@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`) — declarative fleets (`5dive up`, `5dive team import`), or controlling agents on OTHER registered boxes (`5dive fleet`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`) or compiling a durable one into it (`5dive memory add`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`), or decomposing an outcome into a guardrailed task DAG (`5dive goal add`) — hiring a ready-made persona off the agent market (`5dive market`, `5dive hire --from-market`), declarative fleets (`5dive up`, `5dive team import`), or controlling agents on OTHER registered boxes (`5dive fleet`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
 ---
 
 # 5dive-cli
@@ -41,7 +41,7 @@ hands — for example:
 - You want to recall what the team already knows — past decisions, gotchas,
   research — before re-deriving it (`5dive memory search`).
 - You need a read on the fleet: who's burning tokens (`5dive usage`), is any
-  agent stuck/crashlooping (`5dive supervisor`), what shipped in the last 24h
+  agent stuck/drifting (`5dive supervisor`), what shipped in the last 24h
   (`5dive digest`).
 
 If the user just wants you to do the work yourself, do not spawn an agent.
@@ -60,8 +60,15 @@ Everything the CLI does maps onto these resources on the host:
   needs its own bot token. `dashboard` (claude-only, token-free) is web-dashboard
   chat and is folded into every claude create by default — `--channels=none`
   opts out.
-- The CLI is idempotent and safe to call from another agent — your agent
-  user is in the `claude` group and has `sudo 5dive ...` whitelisted.
+- The CLI is idempotent and safe to call from another agent, but **`sudo` is
+  gated by isolation tier** (DIVE-1002). New agents default to `standard` —
+  zero sudo. Only the first agent on a fresh box, or one created with
+  `--isolation=admin`, gets a **scoped** grant: the `5dive` CLI plus non-paging
+  `systemctl start|stop|restart` of `5dive-*` units — NOT `NOPASSWD:ALL`. So the
+  no-sudo surfaces (`5dive task`, `org`, `memory`, `usage`) run from any agent;
+  the root surfaces (`agent create`/`config`/`pair`, `heartbeat on/off`,
+  `doctor`) need an admin agent. `agent restart <name> --defer` runs the
+  deferred self-restart internally so an admin never needs a raw grant.
 
 Agent types on a current host: `antigravity codex claude openclaw hermes
 grok opencode`. Run `sudo 5dive agent types --json` for what's actually
@@ -128,6 +135,41 @@ one — handy when you want a second worker shaped like the first.
 `--role`/`--title` are given — one call to "hire a teammate" with an org-chart
 entry.
 
+#### Hire a ready-made persona from the agent market
+
+Beyond a blank teammate, you can hire a ready-made **persona** off the agent
+market (character-pack registry, DIVE-993/1020):
+
+```bash
+5dive market                          # browse every pack, rarity-first
+5dive market <keyword> [--role=<r>] [--rarity=<tier>] [--seasoned]  # --seasoned = ships trained memory
+5dive market show <slug>              # preview: tier, model, skills, card, DID
+
+5dive hire <role> --from-market --dry-run --json          # resolve + show disclosure, create NOTHING
+5dive hire <role> --from-market [--as=<name>] --yes --json  # provision the top match
+```
+
+`--from-market` **provisions a REAL teammate** and is gated (DIVE-1013):
+`--dry-run` creates nothing; a TTY requires an interactive `y/N`; non-interactive
+needs an explicit `--yes` or it aborts after the disclosure. It provisions via
+`agent import` under the hood.
+
+#### Inspect / import a persona pack
+
+`agent import` is also the path to clone an exact persona — from a market slug or
+a local `.tar.gz`. Always `inspect` an untrusted pack first (read-only, no root):
+
+```bash
+5dive agent inspect <slug|pack.tar.gz> --json        # what shell/hooks/skills it would run
+sudo 5dive agent import <slug|pack.tar.gz> --as=<name> [--allow-hooks] --json
+```
+
+A pack's hooks are **arbitrary shell that auto-runs on the new agent's tool
+events** (the agentjacking surface), so `import` is **deny-by-default on hooks**
+— stripped unless you pass `--allow-hooks` (DIVE-995/1009) — and refuses any
+member with a `..`/absolute path or a symlink (zip-slip + link-escape guards,
+DIVE-1010/1012).
+
 #### Skill inheritance on agent-spawned children
 
 When an agent (you, `SUDO_USER=agent-*`) creates another agent of any
@@ -139,6 +181,11 @@ dashboard don't get this default. Override either way:
   (defaults to `5dive-ai/skills`) or `<owner/repo>:<id>`.
   Example: `--with-skills=5dive-cli,acme/skills:db-tools`.
 - `--no-skills` — opt out, even when called from another agent.
+- `--inherit-memory=<scope>` — seed the new hire's recall store from shared
+  knowledge so it boots knowing the company (DIVE-990). Scope is a comma-list:
+  `wiki`, a sibling `<agent-name>` (its SHAREABLE facts only), or `all`/`team`.
+- `--no-team-bot` — when the box has a shared team bot, new no-bot agents
+  auto-attach (own forum topic, send-only on the shared token); this opts out.
 
 #### Create-then-auth: `--defer-auth`
 
@@ -168,7 +215,7 @@ deepseek qwen nous openai zai`.
 ### Tune a running claude agent: model + effort
 
 ```bash
-sudo 5dive agent config worker-1 set model=claude-sonnet-4-6
+sudo 5dive agent config worker-1 set model=claude-opus-4-8
 sudo 5dive agent config worker-1 set effort=high
 # effort: low|medium|high|xhigh|max — claude only; xhigh/max are Opus-tier.
 # model= also works for codex/grok/antigravity agents.
@@ -486,6 +533,9 @@ any `agent-*` user can read and write directly.
 # --from defaults to your agent name, so created_by is attributed for you.
 5dive task add "audit the auth middleware for OWASP A01" \
   --assignee=worker-1 --priority=high --json
+# --assignee also takes org-routing tokens (role:<r> / charter:<kw>); omit it to
+# route to the org lead/coordinator. --task-budget=<tokens|$cost> caps the
+# on-host loop's spend for that task.
 
 # What's open, who's on what (priority-ordered); --mine filters to you.
 5dive task ls --json
@@ -548,6 +598,11 @@ it and don't guess — gate it:
 
 5dive task inbox --json        # everything currently waiting on a human
 5dive task answer DIVE-12 --value="flag" --json   # records + unblocks + pings the owner
+# You (an agent) can only `task answer` a tier-0/1 DECISION gate. approval /
+# secret / manual gates are HUMAN-ONLY now (enforcement ON): they clear via a
+# Telegram tap (per-gate --human-proof nonce, minted as root — your LLM never
+# sees it) or a non-agent SUDO_UID, never a bare agent-session `sudo task
+# answer`. The old forgeable --proof evidence form was removed (DIVE-916/950).
 ```
 
 Keep `--ask` to ONE crisp question with ~1 line of context; heavy detail
@@ -642,8 +697,13 @@ slip in a `task need` gate); to stop it, `task rm` the run parent (cascades).
 
 #### Maker→verifier loops: the writer never grades itself
 
-For "do the work, then have someone independent check it," give a task a
-**verifier** different from its assignee:
+Verification is **on by default** (DIVE-969): a non-trivial `task add` auto-derives
+acceptance criteria and assigns a grader distinct from the maker, so a plain
+`task done` **hands off to grade instead of closing**. Trivial chores (bodyless
+mechanical titles), low-priority tasks and recurring templates auto-skip it;
+`--no-verify` is the explicit opt-out and `FIVE_VERIFY_DEFAULT=0` is a fleet
+kill-switch. To pin a specific grader (or add one where it auto-skipped), give a
+task a **verifier** different from its assignee:
 
 ```bash
 5dive task add "migrate the auth module to the new SDK" \
@@ -665,6 +725,51 @@ For "do the work, then have someone independent check it," give a task a
 to grade automatically. Writer ≠ grader is the whole point — never set the
 verifier to the same agent as the assignee.
 
+#### LOOP-7: agent-native orchestration verbs
+
+`5dive loop` is a lower-level verb family than the `task loop` relay above —
+JSON in / JSON out, each verb spawns/grades agents directly and honors
+`--ceiling` (per-loop token budget; self-halts + escalates at the limit). Humans
+watch/kill via `task loops --kill <loopId>`; they never author a loop.
+
+```bash
+5dive loop spawn --role=maker|verifier|worker --agent=<type|name> \
+  --prompt="…" [--schema=<json>] [--ceiling=<tok>] [--wait[=<sec>]]
+5dive loop verify --target=<id> --verifier=<agent> [--accept="…"]
+5dive loop grade  --target=<id> --verifier=<agent> [--accept="…"] [--threshold=0-100] [--wait]
+5dive loop panel  --n=<k> --lens="correctness,security" --claim="…" --quorum=<m>   # jury
+5dive loop map    --over=<json-array> --do=<spawn-spec> [--max-concurrency=<n>]    # fan-out
+5dive loop until-dry --round=<spawn-spec> --stop-after=<K> --dedup-key="…"         # drain a queue
+5dive loop collect --handles=<id,id,…>       # gather results from spawned handles
+5dive loop status  --handle=<loopId>         # read-only single-loop drilldown
+5dive loop install <slug> --onto=<agent> [--cron="…"] [--ceiling=<tok>] [--dry-run]
+                                             # drop a marketplace loop pack (persona +
+                                             # skills + cadence) onto an agent; peek first
+                                             # with `loop show <slug>`
+```
+
+### Goals: decompose an outcome into a task graph
+
+`5dive goal add` turns a one-line outcome into a validated, guardrailed task DAG
+(tasks + `task_deps` edges + assignees under a project) — DIVE-984. A planner
+agent proposes it; it's checked for DAG acyclicity, size/depth caps, tier-floor
+and assignability BEFORE anything is created. Over the count checkpoint or
+carrying any Tier-2 task, ONE decision gate holds the plan and nothing
+materializes until a human approves.
+
+```bash
+5dive goal add "ship a public status page" --dry-run --json   # plan + render, create NOTHING
+5dive goal add "ship a public status page" --json \
+  [--project=<key>] [--planner=<agent>] [--max-tasks=12] [--depth-cap=5] \
+  [--checkpoint=6] [--ceiling=40000] [--yes]
+# --yes waives ONLY the count checkpoint; a Tier-2 plan still gates hard.
+5dive goal add --from-gate=<id> --json    # materialize a plan a HUMAN answered 'approve'
+                                          # (the only path that builds a Tier-2 plan)
+```
+
+Always `--dry-run` first to eyeball the plan; the real add is the only thing
+that creates work.
+
 ### Search team memory before re-deriving
 
 `5dive memory search` is the read-path into the accumulated markdown memory —
@@ -676,11 +781,30 @@ a token ceiling. Read-only, no sudo, nothing leaves the box.
 5dive memory search "hetzner capacity gotchas" --json
 5dive memory search "deploy rollback" --limit=4 --max-tokens=800
 5dive memory search "auth" --roots=/path/a,/path/b   # override the default roots
+5dive memory search "auth" --store=wiki   # all (default) | mine | wiki
+5dive memory search "auth" --agent=marcus # another agent's store (per-user 0600 — root only)
 ```
 
 Reach for it before re-deriving past decisions, debugging something a teammate
 already hit, or answering "have we seen this before?" — retrieval beats
 re-reading whole memory files into context.
+
+**Compile the write-path: `memory add`.** The read-path has a write twin — this
+is the CLI behind the "compile before you close" mandate. Body on stdin; it
+writes a frontmatter markdown file into your own store (or the shared team wiki
+with `--store=wiki`, the publish path teammates can search), stamps provenance,
+and appends the store's index line. A token/key tripwire refuses secret-shaped
+bodies (`--force` does NOT bypass it).
+
+```bash
+echo "$BODY" | 5dive memory add --name=hetzner-cpx-drought \
+  --description="cpx line delisted post price-hike; cx dry-run false-positive" \
+  --type=reference --store=wiki --tags=hetzner,capacity \
+  [--valid-to=2026-12-31] [--supersedes=<slug>] [--confidence=high] [--provenance="<src>"]
+# lifecycle envelope (DIVE-1024): recall demotes/flags expired, superseded, low-confidence.
+
+5dive memory doctor --json   # hygiene: index drift, dangling [[links]], stale refs, near-dupes
+```
 
 ### Read the fleet: digest, usage, supervisor
 
@@ -696,13 +820,24 @@ sudo 5dive digest on --at=7  # opt in to daily auto-delivery (default OFF); off 
 # Token burn, per agent / per task (subscription tokens, no dollars).
 5dive usage --json           # board: top agents + top tasks, 24h (--7d)
 5dive usage worker-1 --json  # one agent: per-model + per-task breakdown
-sudo 5dive usage budget set worker-1 --daily=2000000   # soft cap -> ⚠ on the board
+5dive cost --json            # budget-focused board: per-agent 24h burn vs soft/ceiling + state
+5dive activity worker-1 --json    # what it actually DID: files touched, commands run, cost
+                                  # (--task=DIVE-N to scope · --limit=N · --7d)
 5dive usage loops --json     # spend rolled up per loop / topology
+sudo 5dive usage budget set worker-1 --daily=2000000 [--ceiling=<tok>] [--hard-stop]
+                             # --daily soft cap -> ⚠ on the board; hard-stop OFF by default
+sudo 5dive usage budget ls   # all budgets; `budget clear worker-1` removes one
 
-# Fleet health board: per-agent state, classification (stuck/crashloop/idle),
-# cause, last activity. Observe-only — detects + classifies, NEVER auto-acts.
+# Fleet health board: per-agent state, classification, cause, last activity.
+# Classes: healthy | slow | update-pending | stuck | drift (cause one of
+# service-dead|tmux-dead|poller-dead|loop-stuck|no-progress|stale-cli|goal-drift).
+# Observe-only — detects + classifies, NEVER auto-acts.
 sudo 5dive supervisor
 sudo 5dive supervisor --watch      # live repaint (default 5s)
+# Crash-loop detection is SEPARATE — it lives in the restart wrapper
+# (hooks/run-loop.sh, DIVE-1029): exponential backoff on an agent dying within
+# seconds, surfaces the real stderr once, and SUPPRESSES the false "usage limit
+# reset, agent resumed" banner while it's actually just crashing.
 ```
 
 Check `usage` (or `account usage` for rate-limit headroom) **before** blaming
@@ -734,8 +869,10 @@ sudo 5dive doctor --json
 ```
 
 Envelope is always `{ ok: true, data: { summary, checks } }` with exit 0.
-Branch on `data.summary.errors > 0`. Add `--repair` to attempt reversible
-fixes (apt installs, type installer recipes, registry reseed).
+Branch on `data.summary.errors > 0`. Add `--fix` (alias `--repair`) to attempt
+reversible fixes (apt installs, type installer recipes, registry reseed, dead
+poller restart); `--dry-run` previews them. Narrow the run with
+`--category=deps|types|auth|creds|registry|shelld|channels|host|memory`.
 
 Other read surfaces worth knowing:
 
@@ -791,3 +928,7 @@ The full reference manual lives at <https://5dive.com/docs>. If a flag in
 this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
+
+_Synced to 5dive CLI **0.7.23** (2026-07-06). 0.7.24 (crash-loop detection in the
+restart wrapper) and the Unreleased sandbox traverse-ACL fix are in the changelog
+but not yet on this box's binary — trust `5dive --help` if they differ._
