@@ -2,7 +2,7 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.7.23** (2026-07-06).
+Synced to CLI **0.8.4** (2026-07-11).
 
 ## Top-level
 
@@ -11,6 +11,7 @@ Synced to CLI **0.7.23** (2026-07-06).
 5dive account    ...                 # named auth profiles (group sign-ins)
 5dive market     ...                 # browse/search the agent market (no sudo)
 5dive hire       <role> [--from-market]   # sugar: create a teammate (+ org slot)
+5dive fire       <name>              # sugar: remove a teammate (alias of agent rm)
 5dive task       ...                 # host-shared task queue (no sudo)
 5dive project    add|ls|show         # ident namespaces for the queue (no sudo)
 5dive goal       add "<outcome>"     # outcome -> validated, guardrailed task DAG
@@ -24,6 +25,9 @@ Synced to CLI **0.7.23** (2026-07-06).
 5dive fleet      ...                 # register + control OTHER boxes
 5dive up | down | ps | export        # declarative fleet (5dive.yaml)
 5dive team import <slug|path> | team ls
+5dive crew       ...                 # host a CrewAI crew (install/secret/run/show/list/uninstall)
+5dive secret write <KEY> --connector=<name>   # root-only credential drop, value on stdin
+5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
 5dive watch [--interval=N]           # htop-style live view (interactive TTY)
 5dive doctor  [--fix] [--dry-run] [--category=deps|types|auth|creds|registry|shelld|channels|host|memory]
 5dive --version
@@ -53,7 +57,11 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                           [--workdir=<path>]
                           [--auth-profile=<name>]
                           [--isolation=standard|admin|sandboxed]  # DEFAULT standard (zero sudo)
-                          [--provider=<id> --api-key=<key|->]     # hermes/openclaw BYO key
+                          [--provider=<id> --api-key=<key|->]     # BYO key (hermes/openclaw/claude)
+                          [--model=<slug>]                        # override BYO per-tier model defaults (DIVE-1103)
+                          [--telegram-home-channel=<id>]
+                          [--telegram-allowed-users=<csv>]
+                          [--telegram-cos=<child-username>] [--telegram-cos-avatar=<png>]
                           [--with-skills=<spec>[,<spec>...]]      # bare id (5dive-ai/skills) or owner/repo:id
                           [--no-skills]                           # opt out (overrides agent-spawn default)
                           [--inherit-memory=<scope>]              # seed recall store: wiki | <agent> | all/team (DIVE-990)
@@ -69,7 +77,12 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
 5dive agent start   <name>
 5dive agent stop    <name>
 5dive agent restart <name> [--defer]          # --defer = internal systemd-run restart (no raw grant)
-5dive agent rm      <name>
+5dive agent rm      <name>                    # `agent fire` / top-level `5dive fire` are aliases
+5dive agent export  <name> [--with-memory] [--approve-memory=<dir>] [--out=<path>]
+                                              # dump an agent to a persona pack tarball
+5dive agent marketplace [ls]                  # packs published from this box
+5dive agent _svc <start|stop|restart> <unit>  # scoped service lifecycle, 5dive-owned units only
+                                              # (root; replaces raw systemctl in the admin sudoers — sudo-rs safe)
 5dive agent stats   <name> | --all            # --all = whole fleet, incl. health hints
 5dive agent logs    <name> [--follow] [--lines=N] [--tmux]
 5dive agent send    <name> <text...> [--from=<sender>] [--raw]
@@ -82,9 +95,14 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
 5dive agent set-account <agent> <account|default>   # alias for `agent config set auth-profile=`
 ```
 
-`--provider` ids (hermes/openclaw only; mutually exclusive with
-`--defer-auth`): `openrouter google minimax moonshot huggingface anthropic
-deepseek qwen nous openai zai`.
+`--provider` ids (mutually exclusive with `--defer-auth`): `openrouter google
+minimax moonshot huggingface anthropic deepseek qwen nous openai zai`
+(hermes/openclaw). For `--type=claude` (0.8.0, DIVE-1100) only providers with
+an Anthropic-compatible endpoint are valid — `openrouter deepseek moonshot
+zai` — and `--auth-profile` is required (creds are profile-scoped). The CLI
+pins safe per-tier model defaults; `--model=<slug>` (create) or `agent config
+set model=<slug>` (later) overrides them — via OpenRouter any slug the router
+serves works (DIVE-1103).
 
 When `agent create` runs from another agent (`SUDO_USER=agent-*`) against a
 claude-typed agent, `--with-skills=5dive-cli` is the default so the child
@@ -120,7 +138,8 @@ the hood — `agent inspect <slug>` first for the full disclosure.
                                                       # dashboard = claude-only, token-free web chat
 5dive agent config <name> set workdir=<path>          # "default" clears
 5dive agent config <name> set auth-profile=<name>     # "default" clears
-5dive agent config <name> set model=<id>              # runtime model (claude/codex/grok/antigravity)
+5dive agent config <name> set model=<id>              # runtime model (claude/codex/grok/antigravity);
+                                                      #   BYO-provider claude takes any provider slug (DIVE-1103)
 5dive agent config <name> set effort=<low|medium|high|xhigh|max>
                                                       # claude only; xhigh/max are Opus-tier
 5dive agent config <name> set telegram.token=<token|->   # + channels=telegram attaches a bot post-create;
@@ -145,7 +164,28 @@ the hood — `agent inspect <slug>` first for the full disclosure.
 5dive agent telegram-access set <name>                        # write access.json from JSON on stdin; live, no restart
 5dive agent telegram-pending-ignore <name> <code>             # drop a pending pairing without approving
 5dive agent telegram-resolve-handle <name> <@handle>          # getChat — {id, isBot, displayName}
+5dive agent topic get|set <name> [--thread-id=N --chat-id=N]  # per-agent forum topic (team-bot mode)
+5dive agent cos set|verify|mint-link|claim|rotate|set-avatar  # chief-of-staff child bot management
+                   [--token=<tok|->] [--agent=<name>] [--avatar=<png>] [...]
 ```
+
+### Shared team bot
+
+One bot token for the whole box: agents post into one forum group (own topic
+each), a root listener (`5dive-team-bot-listener`) is the sole `getUpdates`
+consumer, and per-agent bridges run send-only (`TELEGRAM_SEND_ONLY`,
+DIVE-1087). The listener answers gate approval-button taps itself, re-reading
+the live gate first (DIVE-1093).
+
+```
+5dive agent team-bot  status|provision|shared|intercom|discover|refresh-listener --group=<chat_id> [--owner=<user_id>]
+5dive agent team-group discover|provision|shared|status [--group=<chat_id>] [--agents=<csv>] [--owner=<user_id>]
+```
+
+`refresh-listener` re-materializes `/opt/5dive/team-bot-listener.ts` from the
+current bundle and restarts the service (idempotent; no-op without a team
+bot). `self-update` and the nightly host update call it automatically
+(DIVE-1095).
 
 `--token=-` reads the token from stdin (never argv); passing `=-` without piping
 anything blocks on stdin until the caller's timeout.
@@ -173,9 +213,18 @@ anything blocks on stdin until the caller's timeout.
 5dive account login  <name> --type=<type>            # TTY-only interactive login into an account
 5dive account rename <old> <new>                     # repoints + restarts every bound agent
 5dive account remove <name>                          # refuses if any agents still bound
+5dive account set-active-provider <profile> <type> <provider>   # flip a profile's BYO provider (hermes only)
 ```
 
 The reserved name `default` is rejected by `account add` / `rename`.
+
+Account rotation (move an agent across profiles on quota exhaustion):
+
+```
+5dive agent rotation get <agent>
+5dive agent rotation set <agent> [--enabled=true|false] [--accounts=a,b,c]
+5dive agent rotation rotate|cooldown|clear-cooldown <agent> [...]
+```
 
 ## Skills
 
@@ -200,6 +249,17 @@ Default file: `5dive.yaml` / `5dive.yml` in cwd. Per-agent spec keys:
 `type, channels, telegram_token, discord_token, workdir, skills, no_skills,
 defer_auth, isolation, auth_profile, provider, api_key`. Strings expand
 `${ENV_VAR}` from the process env; missing vars fail loudly.
+
+## Crew (host a CrewAI crew — DIVE-787)
+
+```
+5dive crew install <git-url> --as=<name> [--entry=<module:Crew>]   # own venv on the box
+5dive crew secret set <name> KEY=VALUE [KEY=VALUE ...]             # BYO LLM key, owner-600
+5dive crew run <name>                                              # co-signed receipt per run
+5dive crew show <name> | list | uninstall <name>
+```
+
+Durable memory persists on the box disk (`CREWAI_STORAGE_DIR`).
 
 ## Tasks (shared queue)
 
@@ -256,6 +316,11 @@ auto-apply the recommendation / T2 hard floor. An agent can `task answer` only
 a **decision** gate — `approval`/`secret`/`manual` are HUMAN-ONLY (enforcement
 ON): they clear via a Telegram tap (per-gate `--human-proof` nonce, minted as
 root) or a non-agent `SUDO_UID`, never a bare agent-session `task answer`.
+
+Precedent prefill (OSS-11/DIVE-976): a gate filed with a blank `--recommend`
+gets its recommendation prefilled from the closest matching answered precedent
+(same type + ask shape, equal-or-higher tier, ≤90 days) and the alert cites it.
+Never mutates the tier or the clear path; never overrides an explicit rec.
 
 ### Recurring templates
 
@@ -406,21 +471,26 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 ## Digest & supervisor
 
 ```
-5dive digest                                 # standup: shipped 24h / in progress / open gates / burn / heartbeat health
-5dive digest on --at=<hour> | digest off     # opt in/out of daily auto-delivery (default OFF)
+5dive digest [--7d|--24h] [--send]           # standup: shipped 24h / in progress / open gates / burn / heartbeat health
+                                             # --send delivers to the paired Telegram chat (root)
+5dive digest on --at=<hour> | digest off | digest status   # daily auto-delivery (default OFF)
 
-5dive supervisor                             # observe-only board: per-agent state + classification + cause
+5dive supervisor                             # health board: per-agent state + classification + cause
 5dive supervisor --watch[=secs]              # live repaint (default 5s; q quits)
-5dive supervisor --tick                      # cron observe pass (root); no-ops unless /var/lib/5dive/supervisor.enabled
+5dive supervisor --tick                      # cron pass (root); no-ops unless /var/lib/5dive/supervisor.enabled
 ```
 
-Supervisor classes (conservative; ZERO auto-actions): `healthy | slow |
-update-pending | stuck | drift`. Causes: `service-dead | tmux-dead |
-poller-dead | loop-stuck | no-progress | stale-cli | goal-drift`. Poller +
-activity signals cover claude/codex/grok/antigravity/opencode. Crash-loop
-detection is SEPARATE — it lives in the restart wrapper (`hooks/run-loop.sh`,
-DIVE-1029): exponential backoff on rapid deaths, surfaces the real stderr once,
-and suppresses the false "usage limit reset, agent resumed" banner.
+Supervisor classes: `healthy | slow | update-pending | stuck | drift`. Causes:
+`service-dead | tmux-dead | poller-dead | loop-stuck | no-progress | stale-cli
+| goal-drift`. Poller + activity signals cover
+claude/codex/grok/antigravity/opencode. The board itself takes ZERO actions;
+the P2 recovery ladder (DIVE-857/970) is a separate opt-in behind its own root
+sentinel (`supervisor.actions.enabled`): nudge → resume → rotate with
+exponentially spaced attempts, escalate to the paired human on exhaustion.
+Crash-loop detection is SEPARATE — it lives in the restart wrapper
+(`hooks/run-loop.sh`, DIVE-1029): exponential backoff on rapid deaths,
+surfaces the real stderr once, and suppresses the false "usage limit reset,
+agent resumed" banner.
 
 ## Fleet (register + control OTHER boxes)
 

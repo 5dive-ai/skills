@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`) or compiling a durable one into it (`5dive memory add`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`), or decomposing an outcome into a guardrailed task DAG (`5dive goal add`) — hiring a ready-made persona off the agent market (`5dive market`, `5dive hire --from-market`), declarative fleets (`5dive up`, `5dive team import`), or controlling agents on OTHER registered boxes (`5dive fleet`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`) or compiling a durable one into it (`5dive memory add`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`), or decomposing an outcome into a guardrailed task DAG (`5dive goal add`) — hiring a ready-made persona off the agent market (`5dive market`, `5dive hire --from-market`) or firing one (`5dive fire`), declarative fleets (`5dive up`, `5dive team import`), hosting a CrewAI crew (`5dive crew`), or controlling agents on OTHER registered boxes (`5dive fleet`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
 ---
 
 # 5dive-cli
@@ -68,7 +68,11 @@ Everything the CLI does maps onto these resources on the host:
   no-sudo surfaces (`5dive task`, `org`, `memory`, `usage`) run from any agent;
   the root surfaces (`agent create`/`config`/`pair`, `heartbeat on/off`,
   `doctor`) need an admin agent. `agent restart <name> --defer` runs the
-  deferred self-restart internally so an admin never needs a raw grant.
+  deferred self-restart internally so an admin never needs a raw grant. For
+  manual unit lifecycle there's a scoped primitive, `sudo 5dive agent _svc
+  <start|stop|restart> <5dive-unit>` — 5dive-owned units only, no eval/pager
+  (the admin sudoers dropped its raw `systemctl` lines because sudo-rs on
+  Ubuntu 26.04 rejects wildcards inside command arguments, DIVE-1088).
 
 Agent types on a current host: `antigravity codex claude openclaw hermes
 grok opencode`. Run `sudo 5dive agent types --json` for what's actually
@@ -125,6 +129,8 @@ sudo 5dive agent logs worker-1 --tmux --lines=80
 
 # 5. Tear it down when you're done — frees the systemd unit + Linux user.
 sudo 5dive agent rm worker-1 --json
+# `5dive fire worker-1` / `agent fire` are aliases of `agent rm` (same guarded
+# teardown) — the counterpart to `5dive hire`.
 ```
 
 `agent clone <src> <dst>` copies an existing agent's type/config into a new
@@ -198,7 +204,7 @@ that doesn't yet have a `combined.env`.
 sudo 5dive agent create draft-bot --type=claude --defer-auth --json
 ```
 
-#### BYO API key: `--provider` (hermes / openclaw only)
+#### BYO API key: `--provider` (hermes / openclaw / claude)
 
 `hermes` and `openclaw` are bring-your-own-model harnesses. Pass the
 upstream provider and key at create time (mutually exclusive with
@@ -212,13 +218,25 @@ sudo 5dive agent create cheap-bot --type=openclaw \
 Providers: `openrouter google minimax moonshot huggingface anthropic
 deepseek qwen nous openai zai`.
 
+Since 0.8.0, `--provider` also works on `--type=claude` — real Claude Code
+pointed at a BYO endpoint — for the subset with an Anthropic-compatible API:
+`openrouter deepseek moonshot zai`. It requires `--auth-profile=<name>` (the
+creds are profile-scoped) and wires `ANTHROPIC_BASE_URL`/`ANTHROPIC_AUTH_TOKEN`
+plus safe per-tier model defaults into that profile. Override any tier with
+`--model=<slug>` at create, or `agent config set model=<slug>` later
+(DIVE-1103). OpenRouter's Anthropic-skin endpoint *translates*, so any
+OpenRouter slug works (`openai/*`, `google/*`, `z-ai/*`, `deepseek/*`, …) —
+but keep the background HAIKU slot on a prompt-caching-capable model or
+every background call pays full price.
+
 ### Tune a running claude agent: model + effort
 
 ```bash
 sudo 5dive agent config worker-1 set model=claude-opus-4-8
 sudo 5dive agent config worker-1 set effort=high
 # effort: low|medium|high|xhigh|max — claude only; xhigh/max are Opus-tier.
-# model= also works for codex/grok/antigravity agents.
+# model= also works for codex/grok/antigravity agents, and for BYO-provider
+# claude agents it takes any slug the provider serves (DIVE-1103).
 ```
 
 `sudo 5dive agent info <name>` shows the resolved type, CLI version, model
@@ -266,6 +284,18 @@ Spec keys per agent: `type, channels, telegram_token, discord_token,
 workdir, skills, no_skills, defer_auth, isolation, auth_profile, provider,
 api_key`. Strings expand `${ENV_VAR}` from the process env and fail loudly
 when missing.
+
+### Host a CrewAI crew: `5dive crew`
+
+The box can run a CrewAI crew as a first-class workload (DIVE-787): its own
+venv, BYO LLM key stored owner-600, durable memory on the box disk
+(`CREWAI_STORAGE_DIR`), and a co-signed receipt per run.
+
+```bash
+sudo 5dive crew install <git-url> --as=<name> [--entry=<module:Crew>]
+sudo 5dive crew secret set <name> KEY=VALUE [KEY=VALUE ...]
+sudo 5dive crew run <name>          # also: show <name> | list | uninstall <name>
+```
 
 ### Recover from `auth_required`
 
@@ -321,6 +351,10 @@ sudo 5dive agent set-account worker-1 default --json   # clears the override
 # Rename / remove. `remove` refuses while any agents are still bound.
 sudo 5dive account rename acme-prod acme-staging --json
 sudo 5dive account remove acme-staging --json
+
+# Flip which BYO provider a profile's hermes uses, when several are signed in.
+# (hermes-only for now.)
+sudo 5dive account set-active-provider acme-prod hermes openrouter --json
 ```
 
 The reserved name `default` is rejected by `account add` / `rename` — at the
@@ -372,6 +406,11 @@ echo "$KEY"       | sudo 5dive agent auth set claude --api-key=-
 Only one `=-` key can be read per invocation, and `=-` without anything piped
 blocks on stdin until your timeout — always actually pipe the value.
 
+For non-channel credentials there's a root-only drop primitive: `5dive secret
+write <KEY> --connector=<name>` reads the value from stdin and writes it into
+root-owned `/etc/5dive/connectors/` without the secret ever touching argv or
+the audit log (DIVE-930/932).
+
 Who may talk to the bot is governed by the agent's `access.json`. Read /
 write it without touching the file by hand (the plugin re-reads per message,
 no restart needed):
@@ -386,6 +425,28 @@ sudo 5dive agent config worker-1 set telegram.allowed-users=433634012,5551234
 
 A group chat the bot should reply in must be present in `groups{}` — without
 it, replies into that group are dropped.
+
+#### Shared team bot: one bot, every agent
+
+Instead of one bot token per agent, a box can run a shared **team bot**: every
+agent posts into one Telegram forum group (its own topic per agent) on a
+single token, and a root listener service (`5dive-team-bot-listener`) is the
+sole `getUpdates` consumer. Per-agent bridges go send-only
+(`TELEGRAM_SEND_ONLY`, propagated into every bridge's env on boot), which
+kills the one-consumer-per-token 409 races (DIVE-1087); the listener also
+handles gate approval-button taps itself, re-reading the live gate before
+answering (DIVE-1093), so `task need` gates stay tappable in team-bot mode.
+
+```bash
+sudo 5dive agent team-bot status|provision|shared|intercom|discover|refresh-listener
+sudo 5dive agent team-group discover|provision|shared|status [--group=<chat_id>]
+sudo 5dive agent topic get|set <name> [--thread-id=N --chat-id=N]  # per-agent forum topic
+```
+
+`refresh-listener` re-materializes the listener from the current CLI bundle
+and restarts it (no-op on boxes without a team bot); `self-update` and the
+nightly host update run it automatically (DIVE-1095), so listener fixes no
+longer sit dormant until someone re-runs `team-bot shared`.
 
 ### Talking to other agents (inter-agent comms)
 
@@ -623,6 +684,15 @@ tier 2** by the CLI regardless of the flag; secret gates are always tier 2.
 Use tier 0/1 for low-stakes reversible calls so humans only see gates that
 matter.
 
+**Precedent prefill (OSS-11).** When you file a gate with a blank
+`--recommend`, the CLI looks for the closest matching answered precedent —
+same need type and ask shape, from an equal-or-higher tier, answered within
+90 days — and prefills the recommendation from it, citing the precedent on
+the alert ("Precedent: you answered X on DIVE-N"). It never changes the
+resolved tier, never touches the clear path, and never overrides an explicit
+`--recommend`; for a decision gate the precedent answer must also be one of
+the current gate's options or only the citation is kept.
+
 **Quiet waits: `task park`.** When a task should sleep without sitting in the
 human inbox (revisit-later, waiting on an external date):
 
@@ -831,7 +901,11 @@ sudo 5dive usage budget ls   # all budgets; `budget clear worker-1` removes one
 # Fleet health board: per-agent state, classification, cause, last activity.
 # Classes: healthy | slow | update-pending | stuck | drift (cause one of
 # service-dead|tmux-dead|poller-dead|loop-stuck|no-progress|stale-cli|goal-drift).
-# Observe-only — detects + classifies, NEVER auto-acts.
+# The BOARD is observe-only. Recovery is a separate opt-in: the P2 ladder
+# (DIVE-857/970) sits behind its own root sentinel (supervisor.actions.enabled)
+# and, when flipped on, walks a stuck agent through nudge -> resume -> rotate
+# with exponentially spaced attempts, escalating to the paired human when the
+# ladder is exhausted. Sentinel absent = zero actions, audit-only ticks.
 sudo 5dive supervisor
 sudo 5dive supervisor --watch      # live repaint (default 5s)
 # Crash-loop detection is SEPARATE — it lives in the restart wrapper
@@ -929,6 +1003,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.7.23** (2026-07-06). 0.7.24 (crash-loop detection in the
-restart wrapper) and the Unreleased sandbox traverse-ACL fix are in the changelog
-but not yet on this box's binary — trust `5dive --help` if they differ._
+_Synced to 5dive CLI **0.8.4** (2026-07-11). A given box's binary can lag by up
+to a day behind main (nightly update channel) — trust `5dive --help` if they
+differ._
