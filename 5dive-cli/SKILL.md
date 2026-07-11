@@ -110,7 +110,7 @@ See `references/exit-codes.md` for the full table.
 ```bash
 # 1. Pick a unique name (lowercase letters/digits/hyphens, ≤16 chars,
 #    must start with a letter). Check the registry first if you care:
-sudo 5dive agent list --json | jq '.data.agents | keys'
+sudo 5dive agent list --json | jq -r '.data[].name'   # data is an ARRAY of agents
 
 # 2. Create the worker. --workdir scopes its tmux cwd; default is
 #    /home/claude/projects.
