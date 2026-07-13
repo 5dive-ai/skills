@@ -384,13 +384,31 @@ sudo 5dive agent telegram-getme --token="$BOT_TOKEN" --json
 ```
 
 `telegram-discover` and `telegram-getme` are read-only (no registry mutation,
-no audit log) and do not require a bound agent.
+no audit log) and do not require a bound agent. A few more read/write
+telegram helpers round out the surface:
+
+```bash
+sudo 5dive agent telegram-info worker-1 [--refresh] --json
+# name-based getMe; reads the token from /etc/5dive/connectors and caches
+# botUsername on the registry (backfills @handles for agents created before
+# that field existed). --refresh forces a re-fetch.
+
+sudo 5dive agent telegram-pending-ignore worker-1 <code> --json
+# drop a pending pairing without approving it (dashboard inbox action).
+
+sudo 5dive agent telegram-resolve-handle worker-1 @someuser --json
+# getChat for @handle via the agent's own bot token -> {id, isBot,
+# displayName}; lets the dashboard add a bot by handle instead of numeric id.
+```
 
 To attach a bot to an agent **after** create:
 
 ```bash
 sudo 5dive agent config worker-1 set telegram.token=<bot-token>
 sudo 5dive agent config worker-1 set channels=telegram
+sudo 5dive agent config worker-1 set telegram.home-channel=<chat-id>
+# hermes only — chat id the gateway posts unsolicited messages to;
+# ignored by claude/openclaw.
 ```
 
 **Token hygiene: prefer stdin over argv.** Any token/key flag accepts the
@@ -1024,6 +1042,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.8.4** (2026-07-11). A given box's binary can lag by up
+_Synced to 5dive CLI **0.8.16** (2026-07-13). A given box's binary can lag by up
 to a day behind main (nightly update channel) — trust `5dive --help` if they
 differ._
