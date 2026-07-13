@@ -595,8 +595,12 @@ any `agent-*` user can read and write directly.
 5dive task add "audit the auth middleware for OWASP A01" \
   --assignee=worker-1 --priority=high --json
 # --assignee also takes org-routing tokens (role:<r> / charter:<kw>); omit it to
-# route to the org lead/coordinator. --task-budget=<tokens|$cost> caps the
-# on-host loop's spend for that task.
+# route to the org lead/coordinator.
+# --task-budget=<tokens|$cost> caps the on-host loop's spend for that task
+# (DIVE-824): a bare number is a token count, a leading '$' is a dollar cost
+# (e.g. $3). It rides on the task row and is enforced via the Messages-API
+# task_budget — a real per-run cap, not advisory. ALWAYS set one on recurring
+# or autonomous tasks so an unattended loop can't run away.
 
 # What's open, who's on what (priority-ordered); --mine filters to you.
 5dive task ls --json
@@ -839,6 +843,23 @@ materializes until a human approves.
 
 Always `--dry-run` first to eyeball the plan; the real add is the only thing
 that creates work.
+
+### Objectives: a standing goal bound to a live metric
+
+`5dive objective` (OSS-19) is different from `goal`: not a one-shot task DAG but
+a **standing target tied to a read-only metric command** that gets re-measured
+each `tick`. Use it to track a number you want to move (conversion %, warm-pool
+size, error rate) rather than to decompose work.
+
+```bash
+5dive objective add "warm pool >= 1" --metric-cmd="5dive ps --warm --json | jq length" \
+  --target=1 --direction=up [--unit=count] [--public]
+5dive objective ls | show <name> | tick [<name>] | pause <name> | resume <name> | rm <name>
+```
+
+`--metric-cmd` must be read-only (it runs every tick); `--direction` says whether
+higher or lower is better; `--public` surfaces it on the public scoreboard. `tick`
+re-measures now; `pause`/`resume` stop/restart measurement; `rm` retires it.
 
 ### Search team memory before re-deriving
 
