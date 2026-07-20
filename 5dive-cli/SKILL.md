@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`) or compiling a durable one into it (`5dive memory add`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`), or decomposing an outcome into a guardrailed task DAG (`5dive goal add`) — hiring a ready-made persona off the agent market (`5dive market`, `5dive hire --from-market`) or firing one (`5dive fire`), declarative fleets (`5dive up`, `5dive team import`), hosting a CrewAI crew (`5dive crew`), or controlling agents on OTHER registered boxes (`5dive fleet`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send`. Also for inspecting/restarting/pairing an existing agent, a machine-readable health check (`5dive doctor --json`), the host-shared task queue + org chart (`5dive task`, `5dive org`), grouping a multi-task effort under a project (`5dive project add`, `task add --project`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`), parking a question on a human (`task need`, risk-tiered via `--tier`) or snoozing work (`task park --wake`), searching the team's accumulated memory/wiki (`5dive memory search`) or compiling a durable one into it (`5dive memory add`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), building or editing multi-agent loops — a relay where each step hands off automatically with optional human gates (`task loop start`/`loop ls`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `task loops`), or decomposing an outcome into a guardrailed task DAG (`5dive goal add`) — hiring a ready-made persona off the agent market (`5dive market`, `5dive hire --from-market`) or firing one (`5dive fire`), declarative fleets (`5dive up`, `5dive team import`), hosting a CrewAI crew (`5dive crew`), controlling agents on OTHER registered boxes (`5dive fleet`), running a self-steering objective bound to a live metric (`5dive objective`, `objective replan`), convening a governance vote (`5dive council convene`, `council gate-clear`), the onboarding wizard (`5dive company`), or a delegated GitHub push-for-review (`5dive push`, needs `agent create --can-push`). When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
 ---
 
 # 5dive-cli
@@ -676,8 +676,15 @@ it and don't guess — gate it:
 5dive task need DIVE-12 --type=decision \
   --ask="Ship behind a flag or straight to prod?" \
   --options="flag|prod" --recommend="flag" --tier=1 --json
-# --type: decision | secret | approval | manual
+# --type: decision | secret | approval | manual | access
 # -> task goes blocked; the human gets an alert with tap buttons.
+
+# --type=access: "I'm blocked on a permission/grant I don't have." Pair it with
+# --probe=<cmd> (DIVE-1243) — a self-check that must currently FAIL; if it
+# succeeds the gate is refused (you already have it) instead of pinging a human
+# for nothing. No --probe still files, just with a warning to confirm you tested.
+5dive task need DIVE-9 --type=access --probe="aws s3 ls s3://prod-bucket" \
+  --ask="Need read access to prod-bucket" --recommend="grant s3:GetObject" --json
 
 5dive task inbox --json        # everything currently waiting on a human
 5dive task answer DIVE-12 --value="flag" --json   # records + unblocks + pings the owner
@@ -724,9 +731,31 @@ human inbox (revisit-later, waiting on an external date):
 5dive task unpark DIVE-12 --json   # wake it early
 ```
 
+**Both `--reason` and `--wake` are REQUIRED** (fail-closed since DIVE-1357 —
+no more block-graveyard: every park needs a revisit date). If you don't know
+one, pick a re-check date; if you're actually waiting on a person, use `task
+need` instead. `park` also refuses over a task with a live, unanswered `task
+need` gate (DIVE-1453) — answer the gate first, or parking would silently
+destroy it with no audit trail.
+
 **Flag for attention: `task escalate <id>`** bumps priority one tier (capped
 at urgent) and pings the owning agent + paired human — use it to raise urgency
 without filing a gate or reassigning.
+
+**Bulk-clear as the paired human: `task clear-recs`.** DIVE-1305 — from a
+verified DM chat, clear every eligible low-risk gate (tier<2, has a
+`--recommend`, not lead-routed) in one shot instead of tapping each one:
+
+```bash
+5dive task clear-recs --channel-proof=<chat_id> --json         # clear everything eligible
+5dive task clear-recs --channel-proof=<chat_id> --only=DIVE-9 --json  # just one
+```
+
+**Who fronts the inbox: `task coordinator [--json]`.** Prints the resolved
+org coordinator (DIVE-333/1568) — the sole agent a surface should pin a
+needs-you banner to, so multiple paired agents don't each independently ping
+the same reminder. Empty output means no org or an ambiguous multi-root org —
+treat that as "nobody pins."
 
 #### Recurring work + waking workers: heartbeat
 
@@ -872,12 +901,61 @@ size, error rate) rather than to decompose work.
 ```bash
 5dive objective add "warm pool >= 1" --metric-cmd="5dive ps --warm --json | jq length" \
   --target=1 --direction=up [--unit=count] [--public]
-5dive objective ls | show <name> | tick [<name>] | pause <name> | resume <name> | rm <name>
+5dive objective ls | show <name> | tick [<name>] | pause <name> | rm <name>
+5dive objective resume <name> [--force]   # --force bypasses an OSS-33 preflight refusal
+                                          # (the planner role currently can't do the work)
 ```
 
 `--metric-cmd` must be read-only (it runs every tick); `--direction` says whether
 higher or lower is better; `--public` surfaces it on the public scoreboard. `tick`
 re-measures now; `pause`/`resume` stop/restart measurement; `rm` retires it.
+
+**Self-steer it: `objective replan <name>`** (OSS-27/OSS-33) drives one cycle —
+a planner proposes a diff (new/reprioritized/cancelled tasks) toward the
+target, validated like a `goal add` plan:
+
+```bash
+5dive objective replan warm-pool --dry-run --json     # see the proposed diff, create nothing
+5dive objective replan warm-pool --json \
+  [--max-new-per-cycle=3] [--no-progress-limit=3] [--yes] [--from-gate=<id>]
+# --yes waives ONLY the count-over-checkpoint gate — a Tier-2 task in the diff
+# still hard-gates, and nothing under --shadow/--propose-only is waivable.
+# --no-progress-limit=N auto-pauses the objective after N flat/adverse cycles.
+```
+
+Always `--dry-run` a replan first, same discipline as `goal add`.
+
+### Governance votes: `5dive council`
+
+For decisions that should be a recorded vote rather than one agent's call —
+membership motions, constitutional amendments, or routing an open gate to a
+deliberation — use `5dive council`. `council convene "<question>"` dispatches
+to the real seated agents (each votes via its own harness, blind first round)
+and seals an auditable, tamper-evident verdict; `council gate-clear <task>`
+routes an open **tier-1** gate to the council instead of a human (a tier-2 or
+human-only-type gate is never self-cleared, always bumped up). Writes
+(`init`, `promote`/`demote`/`expel`, `bench add/rm`) are sudo-gated; reads
+(`roster`, `log`, `verify`) are not. See `references/commands.md` for the
+full verb surface — this is a governance primitive, reach for it deliberately,
+not as a substitute for a normal `task need` gate.
+
+### Delegated push: `5dive push`
+
+An agent created with `--can-push` (needs `--isolation=standard`, the
+default) can push ONE named feature branch for PR review once its task's
+gate is cleared and bound to that branch — `5dive push DIVE-42
+[--branch=<b>] [--dry-run]`. The agent's own process never touches a GitHub
+token; a root-only helper mints one scoped to just that repo, pushes, and
+discards it. `sudo 5dive push setup` (once per box) scaffolds the GitHub App
+config — never pass the private key on argv.
+
+### Company wizard: `5dive company`
+
+`5dive company --yes --name=<n> --objective="<outcome>" --metric-cmd="<cmd>"
+--target=<n> --direction=up|down` is sugar over `project add` + `objective
+add` (+ optional `goal add`) — use it to stand up a whole self-steering
+project namespace in one call instead of three. Bare (TTY) walks an
+interactive wizard.
 
 ### Search team memory before re-deriving
 
@@ -1042,6 +1120,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.8.16** (2026-07-13). A given box's binary can lag by up
+_Synced to 5dive CLI **0.11.35** (2026-07-20). A given box's binary can lag by up
 to a day behind main (nightly update channel) — trust `5dive --help` if they
 differ._

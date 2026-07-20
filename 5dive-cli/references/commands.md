@@ -2,7 +2,7 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.8.4** (2026-07-11).
+Synced to CLI **0.11.35** (2026-07-20).
 
 ## Top-level
 
@@ -12,9 +12,13 @@ Synced to CLI **0.8.4** (2026-07-11).
 5dive market     ...                 # browse/search the agent market (no sudo)
 5dive hire       <role> [--from-market]   # sugar: create a teammate (+ org slot)
 5dive fire       <name>              # sugar: remove a teammate (alias of agent rm)
+5dive company    [--yes] [flags]     # onboarding wizard: project + objective + goal in one shot
 5dive task       ...                 # host-shared task queue (no sudo)
 5dive project    add|ls|show         # ident namespaces for the queue (no sudo)
 5dive goal       add "<outcome>"     # outcome -> validated, guardrailed task DAG
+5dive objective  ...                 # standing target bound to a live metric, self-steers via replan
+5dive council    ...                 # standalone deliberation council (governance votes, sudo for writes)
+5dive push       <id|DIVE-N> | setup # delegated GitHub push-for-review (needs a cleared gate + agent create --can-push)
 5dive loop       ...                 # LOOP-7 agent-native orchestration verbs
 5dive org        ...                 # agent org chart (no sudo)
 5dive heartbeat  ...                 # wake agents that have queued tasks
@@ -67,6 +71,10 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                           [--inherit-memory=<scope>]              # seed recall store: wiki | <agent> | all/team (DIVE-990)
                           [--no-team-bot]                         # opt out of shared team-bot auto-attach
                           [--defer-auth]                          # skip auth gate; first-run UI handles it
+                          [--can-push]                            # DIVE-1462/STEER-4: grant delegated `5dive push`
+                                                                  # (sudoers for _push_do); refused on --isolation=
+                                                                  # sandboxed, no-op+warn on --isolation=admin (already
+                                                                  # covered by its broad sudo)
 5dive agent clone <src> <dst> [--channels=...] [--telegram-token=...]
                               [--discord-token=...] [--workdir=...]
 5dive agent inspect <slug|pack.tar.gz>        # read-only install-time disclosure (no root):
@@ -91,7 +99,7 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                      [--idle-secs=5] [--poll-secs=2]
                                      [--reply-to-chat=<id> [--reply-to-msg=<id>]]
 5dive agent <name>  tui                       # attach this terminal
-5dive agent install <type>                    # install the type's binary
+5dive agent install <type> [--upgrade]        # install (or, with --upgrade/--force/-u, reinstall @latest) the type's binary
 5dive agent set-account <agent> <account|default>   # alias for `agent config set auth-profile=`
 ```
 
@@ -109,6 +117,11 @@ claude-typed agent, `--with-skills=5dive-cli` is the default so the child
 inherits inter-agent comms knowledge. `--no-skills` opts out. Where the box has
 a shared team bot, new no-bot agents auto-attach (own forum topic, send-only on
 the shared token) unless `--no-team-bot`.
+
+Every `--type=codex` create (DIVE-1535) auto-seeds `~/.codex/AGENTS.md` with
+the a2a return-channel convention — `5dive agent send <from> "<result>"` on
+finish, since a headless codex worker only prints to its own tmux pane. Skipped
+if that file already exists (never clobbers a hand-curated one).
 
 ## Hire from the agent market
 
@@ -288,10 +301,20 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task reject <id|DIVE-N> [--feedback="<what to fix>"]   # verifier FAIL: bounce to maker; escalate at max-iters
 5dive task block   <id|DIVE-N> --by=<id|DIVE-N>   # add a blocks edge, mark blocked
 5dive task unblock <id|DIVE-N> [--by=<id|DIVE-N>] # drop edge(s); back to todo if clear
-5dive task park   <id|DIVE-N> --reason="..." [--wake=<YYYY-MM-DD[ HH:MM]|+Nd|+Nh>]  # QUIET wait (no ping/inbox)
+5dive task park   <id|DIVE-N> --reason="..." --wake=<YYYY-MM-DD[ HH:MM]|+Nd|+Nh>  # QUIET wait (no ping/inbox)
 5dive task unpark <id|DIVE-N>                # clear a park early -> todo (unless deps still block)
 5dive task rm <id|DIVE-N>                    # delete (cascades subtasks + edges)
+5dive task coordinator [--json]              # print the resolved org coordinator (DIVE-333/1568):
+                                             #   sole role=coordinator, else the lone org root, else
+                                             #   empty on ambiguity — callers must treat empty as "nobody pins"
 ```
+
+**`park --wake` is REQUIRED, not optional** (fail-closed since DIVE-1357, so a
+park can't rot with no revisit date): `--reason=` is required too. Accepts
+`+Nd` / `+Nh` or an absolute `YYYY-MM-DD[ HH:MM]`. `park` refuses to run over a
+task that already has a live, unanswered `task need` gate — answer the gate
+first (DIVE-1453; parking over it would silently destroy the gate with no
+audit trail).
 
 **Verification is ON by default (DIVE-969):** a non-trivial `task add` derives
 acceptance criteria and assigns a grader ≠ maker, so a plain `task done` HANDS
@@ -302,20 +325,40 @@ Writer ≠ grader is the whole point — never set `--verifier` to the assignee.
 ### Human Task Inbox — park a question on a human
 
 ```
-5dive task need <id|DIVE-N> --type=decision|secret|approval|manual
+5dive task need <id|DIVE-N> --type=decision|secret|approval|manual|access
                 --ask="..." [--options=A|B] [--recommend="A"] [--tier=0|1|2]
+                [--secret-key=<ENV_VAR> --connector=<name>]   # type=secret only, together
+                [--probe=<cmd>]                               # type=access only
                                              # -> blocked, awaiting a human; risk-tiered
 5dive task inbox                             # ONLY human-gated tasks, priority-ordered
+5dive task inbox --send [--channel-proof=<chat>]
+                                             # root-only: DM the owner ONE tap-button digest
+                                             # of up to 10 pending gates (fresh per-gate nonce,
+                                             # never exposed via --json; rotates old buttons dead)
 5dive task answer <id|DIVE-N> --value="..."  # record answer, unblock, ping the owning agent
+5dive task clear-recs --channel-proof=<chat_id> [--only=<id|DIVE-N>] [--from=<who>]
+                                             # DIVE-1305: paired-human bulk-clear — apply every
+                                             # eligible gate's own --recommend as a HUMAN clear
+                                             # (unanswered, blocked, tier<2, has a --recommend,
+                                             # NOT lead-routed); each clear goes through the normal
+                                             # `task answer` path, so provenance matches a real tap
 ```
 
 `--ask` is ONE crisp question (+~1 line context, recommendation up front); heavy
 detail goes in the task BODY. `--recommend` is strongly encouraged (for a
 decision it must match one of `--options`). Gate tiers: T0 auto / T1 48h
 auto-apply the recommendation / T2 hard floor. An agent can `task answer` only
-a **decision** gate — `approval`/`secret`/`manual` are HUMAN-ONLY (enforcement
-ON): they clear via a Telegram tap (per-gate `--human-proof` nonce, minted as
-root) or a non-agent `SUDO_UID`, never a bare agent-session `task answer`.
+a **decision** gate — `approval`/`secret`/`manual`/`access` are HUMAN-ONLY
+(enforcement ON): they clear via a Telegram tap (per-gate `--human-proof` nonce,
+minted as root) or a non-agent `SUDO_UID`, never a bare agent-session `task
+answer`.
+
+`--type=access` (DIVE-1243) is for "I'm blocked on a permission/grant I don't
+have." Pair it with `--probe=<cmd>` — a self-check that MUST currently fail
+(non-zero exit); if it succeeds the gate is refused ("you already have this
+access; not filing") so a stale block can't waste a human ping. Without
+`--probe` the gate still files, just with a warning to confirm you actually
+tested the block.
 
 Precedent prefill (OSS-11/DIVE-976): a gate filed with a blank `--recommend`
 gets its recommendation prefilled from the closest matching answered precedent
@@ -385,6 +428,123 @@ A plan is validated (DAG acyclicity, size/depth caps, tier-floor,
 assignability) BEFORE anything is created. Over the checkpoint threshold or
 carrying any Tier-2 task, ONE decision gate holds the plan and nothing
 materializes until a human approves. Always `--dry-run` first.
+
+## Objectives (standing goal bound to a live metric)
+
+```
+5dive objective add "<outcome>" --metric-cmd="<read-only cmd>" --target=<n>
+                    --direction=up|down [--unit=<u>] [--public] [--planner=<agent>]
+                    [--review="<cron>"] [--max-new-per-cycle=<n>]
+5dive objective ls | show <name> | status|dash <name> | live <name> | shadow <name>
+5dive objective tick [<name>]                # re-measure the metric now
+5dive objective pause  <name>                # stop measurement/replanning (always allowed)
+5dive objective resume <name> [--force]      # restart; --force bypasses an OSS-33 preflight
+                                             #   refusal (planner role can't currently do the work)
+5dive objective rm <name>
+
+5dive objective replan <name> [--planner=<agent>] [--max-new-per-cycle=N]
+                       [--checkpoint=N] [--depth-cap=N] [--ceiling=<tok>] [--wait=<secs>]
+                       [--no-progress-limit=N] [--dry-run] [--yes] [--force]
+                       [--propose-only|--shadow] [--diff=<json>] [--from-gate=<id>] [--from=<who>]
+```
+
+`replan` (OSS-27/OSS-33) drives one self-steering cycle: a planner proposes a
+diff (new/reprioritized/cancelled tasks) toward the metric target, validated
+the same way `goal add` validates a plan. `--yes` waives ONLY the
+count-over-`--checkpoint` gate — never a diff containing a Tier-2 task, and
+never anything under `--propose-only`/`--shadow` (forced when `run_mode` is
+`shadow`; the WHOLE diff gates then, unwaivable). `--no-progress-limit=N`
+auto-pauses the objective after N flat/adverse cycles (`0` = off). `--force`
+overrides a preflight refusal (also usable on `resume`). `--from-gate=<id>`
+applies a diff a human already approved on a prior gate; `--diff=<json>`
+supplies a manual diff instead of invoking the planner.
+
+## Council (standalone deliberation council — governance votes)
+
+```
+sudo 5dive council init --seats=<a:chair,b,c,...> --threshold=<majority|all|N|a/b> --veto=<principal>
+                                             # human-seed the primary Council ONCE (fail-closed if
+                                             # already init'd; --force re-seeds, logged in lineage)
+5dive council lineage [verify|ls]            # verify the sealed hash-chain, or list it
+5dive council roster                         # live seats, threshold/quorum, veto holder, lineage head
+5dive council log [--limit=N]                # sealed verdict history (genesis + every motion + vetoes)
+5dive council record [--json]                # per-seat track record: votes scored vs REAL task outcomes
+5dive council amend --file=<new 5dive.md> [--dry-run]
+                                             # constitutional-class motion (2/3 + full quorum + veto);
+                                             # only swaps 5dive.md on a PASS, digest-sealed not file-authority
+5dive council verify [<receipt-digest>]      # whole-lineage integrity + constitution-drift check
+
+5dive council convene "<question>" [--seats=a,b,c] [--mode=quick|deliberate|adversarial]
+                                   [--bench=<name>] [--class=<decisionClass>] [--threshold=<n>]
+                                   [--timeout=120] [--idle-secs=5] [--poll-secs=2] [--standalone]
+                                             # dispatches to real seated agents by DEFAULT (each
+                                             # votes via its own harness over `agent ask`, blind
+                                             # first round); --standalone uses the single-key
+                                             # modelCall seam instead. A primary-Council PASS
+                                             # offers the founder veto (non-blocking, one-time nonce).
+sudo 5dive council {promote|demote|expel} --subject=<seat> [--lens="..."] [--mode=...] [--dry-run]
+                                             # membership motion as a convened vote; subject recuses;
+                                             # class auto-derived (promote=majority, demote/expel=2/3)
+5dive council veto exercise --receipt=<digest> --nonce=<tap nonce> [--tier=hold|posthoc] [--reason=...]
+                                             # the authenticated founder-veto tap on a sealed pass
+5dive council sign-vote --seat=<id> --vote=approve|reject|escalate|abstain --convene=<id>
+                       (--qdigest=<hex>|--question=<text>) --key-file=<PEM|-> [--rationale=...] [--emit=line|json]
+                                             # a seat signs its own vote at source (sign-at-source);
+                                             # emits the COUNCIL-SIG: line pasted after COUNCIL-VOTE
+5dive council verify-votes --votes=<json|@file> --roster=<json|@file> --convene=<id>
+                           (--qdigest=<hex>|--question=<text>)
+                                             # re-check every co-signed vote vs roster pubkeys +
+                                             # revocation; non-zero exit if any is unsigned/forged/replayed
+
+5dive council bench ls | show <name>
+5dive council bench add <name> --seats=a:lens|b:lens [--mode=] [--threshold=] [--desc=]  # sudo
+5dive council bench rm  <name>                                                          # sudo
+                                             # built-ins council/ship/brand/security; `council`
+                                             # itself is refused (seats change only via promote/demote)
+5dive council gate-clear <task|DIVE-N> [--mode=deliberate] [--seats=a,b,c] [--dry-run]
+                                             # route an OPEN tier-1 gate to the council; a tier>=2 or
+                                             # human-only type is NEVER self-cleared, always bumped
+5dive council rot-triage [<task|DIVE-N>|--all] [--older-than-hours=48] [--dry-run]
+                                             # re-brief a stale unanswered tier-2 gate sharper for
+                                             # the human; NEVER clears it (tier-2 stays human-only)
+```
+
+A veto can never be asserted from a CLI string — `convene --veto-by=...` is a
+detected forge-attempt and refused with exit 9. `--json` is a global flag here
+too. The default `convene` dispatch path needs no model key (each seat uses
+its own harness); `--standalone` uses `COUNCIL_API_KEY`/`COUNCIL_BASE_URL`;
+`COUNCIL_MOCK=1` runs a deterministic offline council for tests/smoke.
+
+## Company (onboarding wizard)
+
+```
+5dive company [--yes] [--name=<company>] [--key=<slug>] [--prefix=<UPPER>]
+              [--objective="<outcome>"] [--metric-cmd="<cmd>"] [--target=<n>]
+              [--direction=up|down] [--unit=<u>] [--planner=<agent>]
+              [--review="<cron>"] [--max-new-per-cycle=<n>] [--goal="<outcome>"]
+```
+
+Thin sugar over `project add` + `objective add` + (optionally) `goal add`: one
+call stands up a project namespace, an objective bound to a metric, and a
+re-plan cadence. Bare (TTY, no `--yes`) walks an interactive wizard; otherwise
+`--yes`/`-y` requires `--name`, `--objective`, `--metric-cmd` and uses
+flags/defaults for the rest — fails if neither a TTY nor `--yes` is present.
+
+## Push (delegated GitHub push-for-review)
+
+```
+5dive push <id|DIVE-N> [--branch=<b>] [--repo=<url>] [--dry-run]
+sudo 5dive push setup [--author="Name <email>"]
+```
+
+Pushes ONE named feature branch for PR review (never `main`/`master`/`HEAD`,
+never a merge) — the agent process itself never touches a token. Requires the
+task's gate to be cleared by a human or a designated lead AND bound to the
+branch being pushed (DIVE-1462); a root-only helper then mints a
+GitHub-App-installation token scoped to just that repo, pushes, and discards
+it. Needs `agent create --can-push` on the calling agent (see Agents, above).
+`push setup` (root) scaffolds the App env file / checks for the private key
+and reports readiness — never pass the key itself on argv.
 
 ## LOOP-7 (agent-native orchestration verbs)
 
