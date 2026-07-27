@@ -99,3 +99,9 @@ diff you skimmed is how bugs ship.
 - [ ] No duplicated logic that already exists in the codebase
 - [ ] Every finding is tagged with a severity and names a failure mode
 - [ ] My verdict (approve / request changes) matches the findings
+
+## See also
+
+[`verify`](../verify) — the complementary skill. Use `code-review` when you have a diff and the
+question is whether the change is any good; use `verify` when you have a claim and the question is
+whether it is true, including claims with no diff to read (a backfill, a migration, a deploy).
