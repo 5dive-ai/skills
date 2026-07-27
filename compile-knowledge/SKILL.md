@@ -80,8 +80,9 @@ stamp the envelope so recall can age it out instead of surfacing stale truth:
 - **`provenance: "<source>"`** — where the fact came from, distinct from
   `compiled_by` (who wrote the note).
 
-`5dive memory add` writes these: `--valid-to=`, `--supersedes=`, `--confidence=`,
-`--provenance=`. All optional — omit them and behaviour is unchanged.
+If your store has a CLI, it likely exposes these as flags — on 5dive, `5dive memory add` takes
+`--valid-to=`, `--supersedes=`, `--confidence=`, `--provenance=`. All optional — omit them and
+behaviour is unchanged, and the frontmatter fields above are the portable part.
 
 ## Anti-patterns
 
