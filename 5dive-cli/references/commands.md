@@ -2,7 +2,7 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.11.35** (2026-07-20).
+Synced to CLI **0.16.30** (2026-07-27).
 
 ## Top-level
 
@@ -32,8 +32,12 @@ Synced to CLI **0.11.35** (2026-07-20).
 5dive crew       ...                 # host a CrewAI crew (install/secret/run/show/list/uninstall)
 5dive secret write <KEY> --connector=<name>   # root-only credential drop, value on stdin
 5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
+5dive proof      ...                 # zero-human autonomy badge publisher (on/off/status/scorecard/publish/tick)
+5dive trace      <id|DIVE-N> [--json] [--no-audit]   # read-only origin/lifecycle/gate-provenance for one task
 5dive watch [--interval=N]           # htop-style live view (interactive TTY)
 5dive doctor  [--fix] [--dry-run] [--category=deps|types|auth|creds|registry|shelld|channels|host|memory]
+5dive selfcheck [--json] [--only=<probe,...>] [--full] [--assume-clean] [--strict] [--allow=<probe,...>] [--report=<file>] [--label=<env>] [--list]
+5dive models    [--json]             # current Claude model id per alias (opus/sonnet/fable/haiku)
 5dive --version
 5dive update --check                 # read-only: behind/stale? (no root)
 5dive self-update                    # upgrade CLI + plugins, RESTARTS ALL AGENTS (alias: update)
@@ -289,16 +293,42 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                [--recurring="<cron>"]        # 5-field cron — creates a recurring TEMPLATE
                [--task-budget=<tokens|$cost>] # per-run spend cap for the on-host loop (DIVE-824)
                [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>] [--no-verify]
+               [--branch=<name>]              # seed a 'Branch: <name>' delegated-push binding (DIVE-1697)
 5dive task ls   [--status=<s>] [--assignee=<agent>] [--mine] [--all] [--recurring] [--project=<key>]
-                                             # default: open, priority-ordered; --recurring lists templates
+                                             # default: open, priority-ordered; --recurring lists only
+                                             #   templates the scheduler still drives (schedule set,
+                                             #   status=todo); --recurring --all lists every template
+                                             #   regardless (DIVE-2055)
 5dive task show <id|DIVE-N>                  # detail + subtasks + blockers
 5dive task assign <id|DIVE-N> <agent>
+5dive task verifier <id|DIVE-N> <agent> [--accept=<criteria>] [--max-iters=<n>]
+                                             # DIVE-1880: attach the maker→verifier rail to an
+                                             # already-filed task (grader must ≠ maker). One-way —
+                                             # no --none/--clear to detach; opting out stays add-time
+5dive task set-branch <id|DIVE-N> <branch>   # DIVE-1462/1697: bind the task to a git branch for
+                                             # delegated push; writes/updates a 'Branch: <name>' body line
+5dive task set-body <id|DIVE-N> <text...> [--append]
+                                             # DIVE-1920: edit a task's body after creation. Default
+                                             # OVERWRITES the body; --append tacks text on (blank-line
+                                             # separated). Works on recurring templates; refused once
+                                             # the task is done/cancelled
 5dive task start  <id|DIVE-N>                # -> in_progress
-5dive task done   <id|DIVE-N> [--result=<text>]   # -> done (or HANDS OFF to grader if verified); result = owner ping
-5dive task cancel <id|DIVE-N> [--result=<text>]   # -> cancelled; --result captures why
+5dive task done   <id|DIVE-N> [--result=<text>] [--force-merge-gate] [--keep-worktree]
+                                             # -> done (or HANDS OFF to grader if verified); result = owner ping
+5dive task deliver <id|DIVE-N> --pr=<url> [--result=<text>]
+                                             # DIVE-1830: maker records the delivery PR + hands off to the
+                                             # verifier; 'task done' now stays BLOCKED until that PR is
+                                             # MERGED and green (see merge-gate note below)
+5dive task cancel <id|DIVE-N> [--result=<text>] [--keep-worktree]   # -> cancelled; --result captures why
 5dive task verify <id|DIVE-N> [--cmd="<cmd>"] [--no-done] [--timeout=<s>]
                                              # run a check; exit 0 => proven-done (flips to done)
 5dive task reject <id|DIVE-N> [--feedback="<what to fix>"]   # verifier FAIL: bounce to maker; escalate at max-iters
+5dive task merge-audit [--limit=N] [--json]  # DIVE-1935: retrospective, READ-ONLY sweep of DONE tasks
+                                             # for a named PR that never merged (or merged red); never reopens
+5dive task reclaim <id|DIVE-N>|--all [--dry-run]
+                                             # DIVE-1967: reclaim node_modules from closed tasks' worktrees
+                                             # (gitignored, npm-ci-regenerable — data-loss-free). --all skips
+                                             # any worktree whose task is in_progress/blocked
 5dive task block   <id|DIVE-N> --by=<id|DIVE-N>   # add a blocks edge, mark blocked
 5dive task unblock <id|DIVE-N> [--by=<id|DIVE-N>] # drop edge(s); back to todo if clear
 5dive task park   <id|DIVE-N> --reason="..." --wake=<YYYY-MM-DD[ HH:MM]|+Nd|+Nh>  # QUIET wait (no ping/inbox)
@@ -307,6 +337,9 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task coordinator [--json]              # print the resolved org coordinator (DIVE-333/1568):
                                              #   sole role=coordinator, else the lone org root, else
                                              #   empty on ambiguity — callers must treat empty as "nobody pins"
+5dive task gate-escalate <ident>             # root-only, internal: re-send a pending gate's alert from a
+                                             # privileged context when its filer itself has no paired
+                                             # channel (DIVE-1927/1968); not a normal agent workflow verb
 ```
 
 **`park --wake` is REQUIRED, not optional** (fail-closed since DIVE-1357, so a
@@ -322,6 +355,66 @@ OFF to grade instead of closing. Trivial/low-priority/recurring tasks auto-skip;
 `--no-verify` opts out and `FIVE_VERIFY_DEFAULT=0` is a fleet kill-switch.
 Writer ≠ grader is the whole point — never set `--verifier` to the assignee.
 
+**A delivered loop is durable against its own maker (DIVE-2007):** once a
+task is handed to its verifier, `task done` from anyone but that verifier is
+refused outright — even a second `task done` from the *maker*. To amend a
+delivered result, send the correction to the verifier and let them fold it
+in; don't re-run `done`. Real exits mid-review: `task reject` (verifier
+bounces it back), `task verify --cmd=` (evidence-backed close), or `task
+cancel` (abandon). `task verifier <id> <agent>` is the retrofit for a task
+that was filed *without* the rail (either `--no-verify` or the DIVE-969
+auto-skip for low-priority/chore titles) — it can also re-point an
+already-in-review handoff to a different grader (moves the queue, re-stamps
+the delivery clock, leaves the maker and iteration count untouched). There is
+no way to detach a verifier once attached; only add-time `--no-verify` opts
+out.
+
+**Merge-gate (DIVE-1830/1835/1935/1955/1965): `done` means merged-to-main,
+not "PR opened."** Once a task carries a *declared* delivery binding —
+either a `delivery_ref` (set by `task deliver --pr=<url>`) or a `Branch:
+<name>` body line (set by `task set-branch` / `task add --branch=`) — `task
+done` refuses to close until `gh` confirms that PR is **MERGED and its
+checks are not RED** (a merged-but-failing PR is refused too). Even with
+*no* declared binding, a second, *mandatory* auto-detect gate still runs on
+every close: it scans open PRs across every repo in `FIVE_GATE_REPOS`
+(default: the CLI repo, `lodar/5dive-api`, `lodar/5dive-frontend`) for a
+title/branch naming the task's ident, and separately greps the close's own
+`--result`/body text for PR references the text asserts were *delivered*
+(a shipping verb like "merged as #6", or a `Delivered:` line — a PR merely
+*cited* in passing, e.g. in a review/triage close, is deliberately not
+checked). `task deliver` is the opt-in half: it's the maker's own act of
+declaring "this is what I shipped," and it hands off to the verifier exactly
+like `task done` would (DIVE-477) except it does **not** close — if there's
+no distinct verifier, the delivery is recorded but the task stays
+`in_progress` until a verifier confirms the merge and closes it themselves.
+A bare `#N` PR reference (no full URL, no `Repo: <owner>/<repo>` body line)
+only resolves when it's unambiguous across the known repos — otherwise the
+gate reports `ambiguous` rather than guess, since repo numbering collides.
+When the gate genuinely can't reach a verdict (no `gh` token, a broken
+parser, a partial repo scan), the close still proceeds but the stored result
+is stamped `[merge-gate: UNVERIFIED — …]` rather than looking silently
+clean. `--force-merge-gate` is the audited escape hatch for any of these
+refusals (a flaky post-merge CI run, etc.) — it's logged, and the leftover
+unmerged PR still surfaces in the weekly branch-hygiene digest. `task
+merge-audit [--limit=N] [--json]` is the read-only retrospective version of
+this same check, run over already-DONE tasks across every `FIVE_GATE_REPOS`
+repo — it only reports, it never reopens anything.
+
+**A close reclaims worktree disk (DIVE-1966/1967):** `task done`/`task
+cancel` automatically deletes `node_modules` (gitignored, `npm ci`
+-regenerable, so provably data-loss-free) from that task's worktree(s) unless
+you pass `--keep-worktree`. The worktree *directory* itself is never
+deleted — it may hold unpushed commits, so `task reclaim` only ever reports
+on that, never prunes it. `task reclaim <id|DIVE-N>|--all [--dry-run]` runs
+the same sweep manually and, with `--all`, skips any worktree whose task is
+still `in_progress`/`blocked`. Env kill-switch: `FIVEDIVE_NO_WT_RECLAIM=1`.
+
+`task set-body <id|DIVE-N> <text...> [--append]` (DIVE-1920) is the only
+route to edit a body after `task add` — a direct DB edit isn't available to
+scoped-sudo makers. It's audited (actor, overwrite-vs-append, prior body
+length) and refuses on a closed (done/cancelled) task; bounce it back with
+`task reject` first if it needs one.
+
 ### Human Task Inbox — park a question on a human
 
 ```
@@ -330,6 +423,9 @@ Writer ≠ grader is the whole point — never set `--verifier` to the assignee.
                 [--secret-key=<ENV_VAR> --connector=<name>]   # type=secret only, together
                 [--probe=<cmd>]                               # type=access only
                                              # -> blocked, awaiting a human; risk-tiered
+5dive task need <id|DIVE-N> --withdraw       # DIVE-1401: cancel a still-pending gate the team itself
+                                             # filed but that's now moot — filer, their lead/coordinator,
+                                             # or a genuine human, no tap required
 5dive task inbox                             # ONLY human-gated tasks, priority-ordered
 5dive task inbox --send [--channel-proof=<chat>]
                                              # root-only: DM the owner ONE tap-button digest
@@ -359,6 +455,17 @@ have." Pair it with `--probe=<cmd>` — a self-check that MUST currently fail
 access; not filing") so a stale block can't waste a human ping. Without
 `--probe` the gate still files, just with a warning to confirm you actually
 tested the block.
+
+`--withdraw` (DIVE-1401) cancels a gate that's still pending
+(`need_answered_at IS NULL`) — it's the antidote to filing an `access`/
+`secret`/`approval` gate that turned out to be moot. It is **not** a grant:
+it never writes `need_answer`/`need_answered_at`, so no secret or approval is
+ever recorded as provided — which is why it's safe to allow without a human
+tap. Authorized callers are the gate's filer, the filer's routed lead/org
+coordinator, or a genuine human caller — resolved from the trusted `EUID`/
+`SUDO_USER` chain (or the real unix login for a non-root caller), **never**
+from `--from`, which is caller-asserted and forgeable. Genuine grant-clears
+still go exclusively through `task answer`.
 
 Precedent prefill (OSS-11/DIVE-976): a gate filed with a blank `--recommend`
 gets its recommendation prefilled from the closest matching answered precedent
@@ -501,6 +608,27 @@ sudo 5dive council {promote|demote|expel} --subject=<seat> [--lens="..."] [--mod
 5dive council bench rm  <name>                                                          # sudo
                                              # built-ins council/ship/brand/security; `council`
                                              # itself is refused (seats change only via promote/demote)
+5dive council schedule add <name> --question="<template>" --cron="<m h dom mon dow>"
+                                   [--bench=<name>] [--mode=quick|deliberate|adversarial]
+                                   [--class=<c>] [--max-actions=N] [--ballot-deadline=<secs>]
+                                   [--context-cmd="<sh>"] [--no-cron]
+5dive council schedule ls | show <name> | rm <name>
+5dive council schedule run <name> [--dry]
+                                             # productize a recurring convene (CNCL-23): `add` binds
+                                             # a named question template to a cron expression and
+                                             # installs a managed crontab line (rides the EXISTING
+                                             # cron rail — NO daemon; --no-cron just saves the config
+                                             # and prints the line instead). The template may embed
+                                             # {{date}}/{{context}}; --context-cmd is a shell snippet
+                                             # run at each fire whose (bounded) stdout fills {{context}}.
+                                             # `run <name>` is what cron actually invokes: gathers
+                                             # context, convenes on the DEFAULT ballot rail (no
+                                             # pane-scrape, CNCL-18 — convene seals its own receipt
+                                             # into the lineage), then files up to --max-actions
+                                             # ACTION: items from seat rationales as --from=council
+                                             # board tasks. An inquorate or failed run is a CNCL-18
+                                             # signal, never fatal (exit 0). `add`/`rm` write the
+                                             # root-owned schedules.json — run under sudo.
 5dive council gate-clear <task|DIVE-N> [--mode=deliberate] [--seats=a,b,c] [--dry-run]
                                              # route an OPEN tier-1 gate to the council; a tier>=2 or
                                              # human-only type is NEVER self-cleared, always bumped
@@ -514,6 +642,22 @@ detected forge-attempt and refused with exit 9. `--json` is a global flag here
 too. The default `convene` dispatch path needs no model key (each seat uses
 its own harness); `--standalone` uses `COUNCIL_API_KEY`/`COUNCIL_BASE_URL`;
 `COUNCIL_MOCK=1` runs a deterministic offline council for tests/smoke.
+
+A schedule's crontab line is keyed by a `# 5dive-council-schedule:<name>`
+marker, so `add` (re-running it updates in place) and `rm` are idempotent —
+install/remove only ever touches that one line, never duplicating or
+clobbering unrelated cron entries. `add`/`rm` require write access to the
+root-owned council dir (schedules.json), so they need `sudo`; `ls`/`show`/
+`run` don't. `run <name>` (what cron actually calls) never fails the cron job
+itself: a failed convene, or a quorate-but-inquorate verdict, both log to
+`<name>.log` and return exit 0 (CNCL-18 signal, not an error) with no tasks
+filed; only a quorate PASS files up to `--max-actions` `ACTION:`-prefixed
+board tasks via a real `5dive task add --from=council`, each stamped with the
+sealed receipt digest for traceability. `--dry` runs the same pipeline but
+prints the `task add` invocations instead of executing them. A `schedule
+render <name>` action also exists in the dispatch, but it's internal-only
+plumbing that `run` calls to resolve `{{date}}`/`{{context}}` into the final
+question — it's not listed in `council --help` and has no standalone use case.
 
 ## Company (onboarding wizard)
 
@@ -545,6 +689,41 @@ GitHub-App-installation token scoped to just that repo, pushes, and discards
 it. Needs `agent create --can-push` on the calling agent (see Agents, above).
 `push setup` (root) scaffolds the App env file / checks for the private key
 and reports readiness — never pass the key itself on argv.
+
+## Proof (zero-human autonomy badge — OSS-17/OSS-38)
+
+```
+5dive proof on --repo=<url> [--branch=status] [--at=<0-23>] [--user=<u>]
+               [--as-name=<name> --as-email=<email>]
+5dive proof off
+5dive proof status [--json]
+5dive proof scorecard [--json] [--7d] [--by=tier|class]   # LOCAL multi-dim metrics by risk tier
+5dive proof publish [--dry-run] [--repo=<url>] [--branch=<b>]
+5dive proof tick                                            # cron driver; gated on the on/off pref
+```
+
+Publishes a daily public "zero-human" status badge/scorecard to a repo,
+answering "how much of what shipped needed a human?" from real task-outcome
+data (not self-report). `on` installs an idempotent daily cron (`proof tick`)
+gated by a per-box preference (`${STATE_DIR}/proof.json`); `off` removes it.
+`scorecard` is the read-only local metrics view (`--by=tier` is the only
+grouping that actually varies output — `--by=class` was planned but never
+wired, so it silently falls back to the same tier grouping).
+
+**`publish`/`on` refuse without a resolved git identity (DIVE-2051) — exit
+code 4, distinct from the healthy-no-op exit 3.** Identity resolves in order:
+(1) `ZH_GIT_NAME`/`ZH_GIT_EMAIL` env, per-invocation; (2)
+`proof.json .identity.{name,email}`, set via `proof on --as-name=
+--as-email=` (both required together, email format-validated); (3) the
+publishing user's own git config. `--user=<u>` on `proof on` resolves layer 3
+AS that user, not the caller — a cron-ownership trap if you pin the wrong
+one. **The very first `publish` is gated behind an explicit approval task
+filed to lodar** (emitting a public brand/comms artifact), cached once
+approved via a verifiable human-tap nonce — a plain `task answer` doesn't
+satisfy it. Nothing publishes silently: every refusal path (no identity, no
+approval, approval declined, state-write failure after a successful push)
+prints its own loud reason rather than degrading to a stale "last published:
+never".
 
 ## LOOP-7 (agent-native orchestration verbs)
 
@@ -628,6 +807,43 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 5dive account usage                          # per-account 5h/7d rate-limit headroom (vs token burn)
 ```
 
+## Trace (read-only causal timeline for one task)
+
+```
+5dive trace <id|DIVE-N> [--json] [--no-audit]
+```
+
+Reconstructs one task's story goal → ship from columns the row already
+carries (`created_at`, `started_at`, `handoff_delivered_at`,
+`handoff_ack_at`, `need_answered_at`, `shipped_flag_at`, `done_at`) plus its
+project/goal, parent chain, originating objective/loop, and any audit-log
+lines mentioning its ident. No mutation, no lock — same posture as `usage`/
+`digest`/`memory search`. Text mode: origin block, chronological timeline
+(a pending gate shows inline as `(pending)`), audit-log refs if any matched,
+and a final `verdict:` line.
+
+**The verdict is the zero-human proof story compiled into one line** — it
+reads gate *provenance*, not effort: `human_touchpoints` only counts a
+`need_answered_at` whose `need_answered_by` is prefixed `human:` (the
+verified-human-clear path, DIVE-394); a decision gate an agent answered
+itself does **not** count even though the row exists. `zero-human` = done
+with 0 counted human touchpoints; otherwise `human-in-the-loop` names the
+count, or `cancelled`, or (open task) `in progress — blocked on a pending
+<type> gate` / `in progress — N human touchpoint(s) so far`.
+
+**Audit-log references are supplementary, never authoritative — the tool
+says so on its own output.** Two structural gaps mean "absent from the log"
+is not proof an action didn't happen: rows written before CLI v0.15.26
+systematically omit `task`/`task need` sub-events taken by a non-root agent
+acting as itself (gone forever), and a row whose append failed used to
+vanish silently — it now leaves a marker surfaced as `audit_drops`
+(JSON) / an `audit-log DROPS:` line (text) when nonzero. Both caveats print
+in text mode whenever audit is consulted; `--no-audit` skips reading the log
+(and the caveat) entirely. Exit codes: `E_USAGE` (2) no id/unknown flag,
+`E_VALIDATION` (3) malformed ref, `E_NOT_FOUND` (4) no match — otherwise 0
+regardless of the task's own status; tracing a cancelled or stuck task is
+not itself a failure.
+
 ## Digest & supervisor
 
 ```
@@ -689,6 +905,60 @@ fails the whole view.
 registry reseed, rename a stale `~/.claude/.credentials.json` that shadows an
 env token, restart an agent whose telegram poller died, and force `needrestart`
 to list-only so a library upgrade can't bounce the whole fleet.
+
+## Selfcheck (does the fleet's OWN instrumentation still work?)
+
+```
+5dive selfcheck [--json] [--only=<probe,...>] [--full] [--assume-clean]
+                [--strict] [--allow=<probe,...>] [--report=<file>] [--label=<env>] [--list]
+```
+
+Where `doctor` asks "is the box healthy", `selfcheck` asks "can our own
+instruments still tell?" — it runs each critical rail FOR REAL against a
+throwaway, isolated state (own `STATE_DIR`/`TASKS_DB`/`AUDIT_LOG` per probe,
+never the live store) and asserts the *effect* it's supposed to have, not the
+string it printed. `--list` prints the probe corpus: `gate-delivery`,
+`audit-root`, `audit-nonroot`, `harness-verdicts`, `bundle-integrity`,
+`snapshot-rails`, `scorecard-honesty`.
+
+Each probe reports `pass` | `fail` | `not-reached` | `error`. **`not-reached`
+is a first-class state, never folded into `pass`** — a probe whose
+precondition is absent (e.g. `audit-root` run as non-root) has not shown its
+rail works, and is only excusable with a machine-readable `reason`; a
+`not-reached` with no reason counts `unexplained` and fails the run.
+`audit-root`/`audit-nonroot` are deliberately never reachable together in one
+run — a root run always reports `audit-nonroot` not-reached and vice versa —
+so full coverage needs a root job and a non-root job unioned via
+`--report=<file>` + `--label=<env>` (`tests/meta/selfcheck-union.sh`).
+
+`--full` runs the harness-verdict mutation sweep over the WHOLE test corpus
+(~164-168 harnesses) instead of a 3-harness sample — budget ~10min with
+`--assume-clean`, ~22min bare (progress streams to stderr throughout; never
+put this on an interactive path). `--strict` treats ANY `not-reached` (even
+with a reason) as failure — only sound in an environment you know is fully
+complete. `--allow=<probe,...>` declares probes THIS deployment structurally
+can never reach; it's recorded for the union checker and does NOT change
+this run's own exit code.
+
+**Exit codes differ from `doctor`:** `doctor --json` always exits 0 and
+expects callers to branch on `data.summary`; **`selfcheck --json` exits
+non-zero on failure** — `E_GENERIC` (1) if any probe failed, errored, or was
+an unexplained not-reached (also under `--strict`, any not-reached at all).
+0 only if every probe passed or was a reasoned not-reached.
+
+## Models
+
+```
+5dive models [--json]
+```
+
+Prints the current Claude model id for each short alias (`opus`, `sonnet`,
+`fable`, `haiku`), read-only, no sudo. This is the single source of truth
+(`src/lib/models.sh`, DIVE-1883) that both `agent create`/`agent config set
+model=` alias-resolution and the Telegram `/model` picker read against — a
+model release is meant to be a one-line edit to that file and nothing else.
+Check it rather than assuming a hardcoded model id is still current; the
+alias and the underlying id drift apart across releases.
 
 ## Known agent types (default install)
 
