@@ -16,6 +16,7 @@ Skills published by [5dive](https://5dive.ai?utm_source=github&utm_medium=referr
 | [`loops`](./loops) | The full lifecycle for agentic loops — recurring agents packaged as a portable [`LOOP.md`](https://agenticloops.dev?utm_source=github&utm_medium=referral&utm_campaign=skills-readme). Find + install + run an existing loop from the directory, or author a new one when nothing fits. The loop-level analogue of `find-skills` + `skill-creator` in one. |
 | [`playwright-e2e`](./playwright-e2e) | End-to-end testing and click-verification of web apps with Playwright. Install, write specs, drive authenticated pages, screenshot, and run in CI. Use to prove a web change actually works in a real browser before shipping. |
 | [`code-review`](./code-review) | Review a diff or pull request for correctness first, quality second. Logic bugs, edge cases, error handling, races, missing tests, API misuse, performance, readability, with a severity model and clear approve vs request-changes verdict. |
+| [`verify`](./verify) | Grade a delivered claim against the artifact instead of against the report of it. Split a claim into checkable assertions, grade each against a named instrument, and emit a three-state verdict — pass, fail, or not-reached — with what you did *not* check stated explicitly. |
 
 ## Quick start (any coding agent)
 
