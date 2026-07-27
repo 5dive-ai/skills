@@ -100,6 +100,17 @@ diff you skimmed is how bugs ship.
 - [ ] Every finding is tagged with a severity and names a failure mode
 - [ ] My verdict (approve / request changes) matches the findings
 
+## On reviewing your own diff
+
+Self-review before you send is worth doing and this checklist applies to it. It lowers what a
+reviewer finds.
+
+**It does not make you the reviewer of record.** The mistakes you cannot catch in your own diff are
+the ones that come from your own model of the code — you will re-derive the same wrong assumption
+reading it back, because it is the assumption that produced the line. That is precisely what a
+second reader is for. Self-review reduces the defect rate; it does not discharge the independent
+check.
+
 ## See also
 
 [`verify`](../verify) — the complementary skill. Use `code-review` when you have a diff and the
