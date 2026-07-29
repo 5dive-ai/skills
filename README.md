@@ -17,6 +17,7 @@ Skills published by [5dive](https://5dive.ai?utm_source=github&utm_medium=referr
 | [`playwright-e2e`](./playwright-e2e) | End-to-end testing and click-verification of web apps with Playwright. Install, write specs, drive authenticated pages, screenshot, and run in CI. Use to prove a web change actually works in a real browser before shipping. |
 | [`code-review`](./code-review) | Review a diff or pull request for correctness first, quality second. Logic bugs, edge cases, error handling, races, missing tests, API misuse, performance, readability, with a severity model and clear approve vs request-changes verdict. |
 | [`verify`](./verify) | Grade a delivered claim against the artifact instead of against the report of it. Split a claim into checkable assertions, grade each against a named instrument, and emit a three-state verdict — pass, fail, or not-reached — with what you did *not* check stated explicitly. |
+| [`deep-research`](./deep-research) | Run structured, multi-source research that produces a trustworthy, cited synthesized answer rather than a pile of links. Scope the question, fan out across sources, judge source quality, adversarially verify each key claim, separate fact from inference, and report with explicit confidence. |
 
 ## Quick start (any coding agent)
 
