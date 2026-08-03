@@ -2,7 +2,7 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.16.30** (2026-07-27).
+Synced to CLI **0.18.6** (commit `089f7d2`, 2026-08-03).
 
 ## Top-level
 
@@ -18,7 +18,10 @@ Synced to CLI **0.16.30** (2026-07-27).
 5dive goal       add "<outcome>"     # outcome -> validated, guardrailed task DAG
 5dive objective  ...                 # standing target bound to a live metric, self-steers via replan
 5dive council    ...                 # standalone deliberation council (governance votes, sudo for writes)
+5dive constitution ...               # front door onto the machine-enforced constitution (show/init/set/edit)
 5dive push       <id|DIVE-N> | setup # delegated GitHub push-for-review (needs a cleared gate + agent create --can-push)
+5dive deploy     <id|DIVE-N>         # delegated PRODUCTION deploy (needs a cleared gate + agent create --can-deploy)
+5dive gh         <gh args...>        # actor-routed gh: writes as 5dive-bot, admin/reads as your own credential
 5dive loop       ...                 # LOOP-7 agent-native orchestration verbs
 5dive org        ...                 # agent org chart (no sudo)
 5dive heartbeat  ...                 # wake agents that have queued tasks
@@ -38,6 +41,8 @@ Synced to CLI **0.16.30** (2026-07-27).
 5dive doctor  [--fix] [--dry-run] [--category=deps|types|auth|creds|registry|shelld|channels|host|memory]
 5dive selfcheck [--json] [--only=<probe,...>] [--full] [--assume-clean] [--strict] [--allow=<probe,...>] [--report=<file>] [--label=<env>] [--list]
 5dive models    [--json]             # current Claude model id per alias (opus/sonnet/fable/haiku)
+5dive whoami    [--json]             # actor/authority/tier, with the SOURCE of each; exits 6 if unmeasurable
+5dive bug       [--file]             # preview (default) or file a diagnostic issue against 5dive-ai/5dive
 5dive --version
 5dive update --check                 # read-only: behind/stale? (no root)
 5dive self-update                    # upgrade CLI + plugins, RESTARTS ALL AGENTS (alias: update)
@@ -659,6 +664,30 @@ render <name>` action also exists in the dispatch, but it's internal-only
 plumbing that `run` calls to resolve `{{date}}`/`{{context}}` into the final
 question — it's not listed in `council --help` and has no standalone use case.
 
+## Constitution (machine-enforced guardrails — DIVE-1742)
+
+```
+5dive constitution show [--json]                        # read-only: hard_gates, ship/comms, thresholds,
+                                                         # veto, sealed vs live digest, drift + verify status
+sudo 5dive constitution init [--force] [--json]         # seed a fresh guardrails-only constitution.yaml
+                                                         # (Council keys present but dormant); unsealed
+echo '{"hard_gates":{...}}' | sudo 5dive constitution set --json
+                                                         # dashboard EDIT contract: JSON patch on stdin,
+                                                         # merged + re-serialized + validated server-side
+sudo 5dive constitution set --file=<constitution.yaml> [--principal=<human:agent|tg:id>] [--dry-run] [--json]
+sudo 5dive constitution edit [--json]                   # open in $EDITOR, seal the edited bytes on save
+```
+
+A solo-user-friendly front door onto the same sealed guardrails a Council
+governs. `show` is the read-only envelope the dashboard consumes instead of
+parsing `constitution.yaml` itself; only `hard_gates`/`ship`/`comms` are
+settable through `set` — governance keys (council/quorum/veto/thresholds) are
+unreachable here and only move via `council amend`. Write paths route by
+mode: a real multi-seat Council governs → a constitutional amendment (2/3 +
+full quorum + founder veto); otherwise a single-principal direct-seal (no
+convene, no quorum). A later hand-edit of the file drifts from the sealed
+digest and fails closed (DIVE-1695).
+
 ## Company (onboarding wizard)
 
 ```
@@ -689,6 +718,26 @@ GitHub-App-installation token scoped to just that repo, pushes, and discards
 it. Needs `agent create --can-push` on the calling agent (see Agents, above).
 `push setup` (root) scaffolds the App env file / checks for the private key
 and reports readiness — never pass the key itself on argv.
+
+## Deploy (delegated PRODUCTION deploy — INST-5)
+
+```
+5dive deploy <id|DIVE-N> [--target=<project@ref>] [--env=production|preview] [--dry-run]
+```
+
+Same gate → bind → root-only-executor shape as `push`, generalized to a
+production deploy. Needs the task's gate cleared AND bound to the target
+(`Deploy: <project>@<ref>` line in the task body, or `--target` — a flag that
+disagrees with the task's own line is refused, never silently overridden).
+The repo deployed is **not a parameter**: it's read from the named Vercel
+project's own GitHub link, so a granted agent can point at an already-linked
+project/ref but never redirect it to a repo of its choosing. The credential
+(`VERCEL_TOKEN`) is read root-only inside `_deploy_do` and never held by the
+agent process. Requires `agent create --can-deploy` on the calling agent
+(separate axis from `--can-push` — shipping a reviewable branch and pushing
+it to production are different capabilities). `--dry-run` previews (gate +
+target-binding checks only, no deploy, no privilege needed beyond reading the
+task).
 
 ## Proof (zero-human autonomy badge — OSS-17/OSS-38)
 
@@ -844,6 +893,47 @@ in text mode whenever audit is consulted; `--no-audit` skips reading the log
 regardless of the task's own status; tracing a cancelled or stuck task is
 not itself a failure.
 
+## Actor-routed gh (DIVE-2448)
+
+```
+5dive gh <gh args...>                    # route by operation, decision printed on stderr
+5dive gh --as=bot <gh args...>           # force the machine account (still refused for admin-class ops)
+5dive gh --as=caller <gh args...>        # force your own credential (pre-2448 behaviour), on the record
+5dive gh --explain <gh args...>          # print the routing decision, run nothing
+5dive gh whoami                          # resolve BOTH identities: caller login and bot login
+```
+
+An agent's `gh` write authenticates as the human account by default, so the
+audit trail can't tell an agent action from a human one (DIVE-2232). This
+verb makes the routing decision CONFIGURATION instead of caller discipline:
+`write`-class operations (pr create/merge/comment, issue edit, release
+create, …) go out as the `5dive-bot` machine account so the actor field means
+something; `admin`-class (repo settings, secrets, rulesets, collaborators —
+`5dive-bot` is `admin=false` on every repo) and `read`-class calls stay on
+your own credential. The credential itself is never held by the agent
+process — read root-only inside `_gh_do` from `/etc/5dive/connectors/github-bot.env`
+and passed to `gh` as an env prefix, never argv. An operation this file
+doesn't recognize routes to the caller (today's behaviour) and says so,
+rather than silently guessing.
+
+## Identity (`whoami`)
+
+```
+5dive whoami [--json]
+```
+
+Prints the actor (unix principal + registry agent), authority
+(`root` | `sudo:<who>` | `self`) and tier of the CURRENT process — with the
+SOURCE of each value, not just the value. Read-only: no lock, no write, no
+audit row (a verb whose job is reporting identity must not need identity to
+be writable first). Identity is uid-first — `$EUID` (or `$SUDO_UID` at real
+root) resolved against `/etc/passwd` in pure bash — and deliberately never
+consults `--from`/argv, `$USER`, `$SUDO_USER`, `$FIVEDIVE_AUDIT_USER`, `id`,
+or `getent` (the last two are PATH-resolved and therefore spoofable).
+**Exit status is part of the contract:** an unmeasurable actor exits 6
+(`auth_required`) rather than printing `unknown` with a success code, so
+`5dive whoami >/dev/null` is itself a usable measurability check.
+
 ## Digest & supervisor
 
 ```
@@ -905,6 +995,26 @@ fails the whole view.
 registry reseed, rename a stale `~/.claude/.credentials.json` that shadows an
 env token, restart an agent whose telegram poller died, and force `needrestart`
 to list-only so a library upgrade can't bounce the whole fleet.
+
+## Bug reports (diagnostic issue filing — DIVE-2323)
+
+```
+5dive bug [--verb=<name>] [--exit=<code>] [--no-probes] [--file]
+```
+
+Preview (the default) builds and prints a diagnostic payload; files nothing.
+`--verb`/`--exit` name the 5dive verb that failed and its exit code, for
+context. `--file` re-prints the identical payload and then opens it as a
+GitHub issue against `5dive-ai/5dive` (via `5dive gh issue create`, so it
+files as `5dive-bot` when routing allows it) — a TTY also gets an
+interactive y/N, and there is no separate unattended path: an agent takes
+the same `--file` flag a human does. **The payload is a fixed ALLOWLIST**,
+never a denylist — version, OS, bash version, install method, the failing
+verb + exit code, and `selfcheck` probe **name + verdict pairs only** (never
+the free-text `reason`/`detail` fields underneath them, which is where
+paths/hostnames/agent names could leak). `--no-probes` drops the selfcheck
+summary entirely. Nothing ever leaves the box except via an explicit
+`--file`.
 
 ## Selfcheck (does the fleet's OWN instrumentation still work?)
 
