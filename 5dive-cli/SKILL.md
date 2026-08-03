@@ -229,6 +229,25 @@ for it before re-deriving past decisions or debugging something a teammate
 already hit. For the write-path (`memory add`, compiling into the shared
 wiki) and hygiene checks, see `5dive-cli-extras`.
 
+### Check your own identity, or run `gh` as the right one
+
+```bash
+5dive whoami --json     # actor, authority (root|sudo:<who>|self) and tier — with the SOURCE of each
+```
+
+Reach for this when a gate refusal or a permission error doesn't make sense —
+it names which uid/agent/tier the CLI actually sees you as, not what you
+assume. Exits 6 (`auth_required`) rather than printing `unknown` if the actor
+can't be measured, so it doubles as a scriptable measurability check.
+
+When a task involves opening/commenting on a PR or issue as an agent, prefer
+`5dive gh <gh args...>` over calling the `gh` binary directly: writes
+(`pr create`, `pr merge`, `issue comment`, …) route to the `5dive-bot`
+machine account so the GitHub actor field actually distinguishes an agent
+action from a human one (DIVE-2448); reads and admin-class calls stay on
+your own credential automatically. `5dive gh --explain <args>` previews the
+routing decision without running anything.
+
 ## Rules of engagement
 
 1. **Always pass `--json`.** Parse the envelope. Don't grep stderr.
@@ -253,6 +272,9 @@ wiki) and hygiene checks, see `5dive-cli-extras`.
 ## Reference
 
 - `references/commands.md` — every subcommand and flag, copy/pasteable.
+  Includes the less-frequent top-level verbs not recapped above: `deploy`
+  (delegated production deploy, INST-5), `bug` (diagnostic issue filing) and
+  `constitution` (front door onto the machine-enforced guardrails).
 - `references/exit-codes.md` — exit codes & error classes.
 - `references/paths.md` — on-disk state layout (only for debugging).
 - `5dive-cli-extras` skill — crew hosting, accounts, auth recovery, compose/
@@ -267,6 +289,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.17.2** (2026-07-29). A given box's binary can lag by up
-to a day behind main (nightly update channel) — trust `5dive --help` if they
-differ._
+_Synced to 5dive CLI **0.18.6** (commit `089f7d2`, 2026-08-03). A given box's
+binary can lag by up to a day behind main (nightly update channel) — trust
+`5dive --help` if they differ._
