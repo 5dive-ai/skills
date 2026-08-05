@@ -176,9 +176,9 @@ the plugin re-reads per message):
 
 ```bash
 sudo 5dive agent telegram-access get worker-1 --json
-echo '{"dmPolicy":"allowlist","allowFrom":[433634012],"groups":{}}' \
+echo '{"dmPolicy":"allowlist","allowFrom":[1234567890],"groups":{}}' \
   | sudo 5dive agent telegram-access set worker-1
-sudo 5dive agent config worker-1 set telegram.allowed-users=433634012,5551234  # shortcut
+sudo 5dive agent config worker-1 set telegram.allowed-users=1234567890,5551234  # shortcut
 ```
 
 A group chat the bot should reply in must be present in `groups{}` — without
@@ -201,7 +201,7 @@ sudo 5dive agent topic get|set <name> [--thread-id=N --chat-id=N]  # per-agent f
 When the user's request arrives via the channel plugin, it's wrapped:
 
 ```
-<channel source="plugin:telegram:telegram" chat_id="433634012" message_id="4671" user="..." ts="...">
+<channel source="plugin:telegram:telegram" chat_id="1234567890" message_id="4671" user="..." ts="...">
 redirect to marketing
 </channel>
 ```
@@ -211,7 +211,7 @@ Map `chat_id` → `--reply-to-chat=<chat_id>` and `message_id` →
 
 ```bash
 sudo 5dive agent send marketing \
-  --reply-to-chat=433634012 --reply-to-msg=4671 \
+  --reply-to-chat=1234567890 --reply-to-msg=4671 \
   "User @alice asked your take on the Q3 launch copy. Reply in the chat
    via your own bot — do not reply back to me."
 ```
