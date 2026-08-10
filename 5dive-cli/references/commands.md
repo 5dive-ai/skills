@@ -1167,16 +1167,32 @@ once the ACP client has already spawned it. `exec`s into bun on success, so
 the row this verb writes to the audit log is emitted *before* the exec
 (the dispatcher's own EXIT-trap audit row never fires past an `exec`).
 
-**Known defect (2026-08-10): broken for a normal (non-root) user today.** The
-staging step unconditionally `chmod`s `${ACP_RUN_DIR:-/opt/5dive}/acp-server.ts`
-on every invocation, and that chmod needs *ownership* of the file, not just
-write access to it — group-writable dir, group-writable file, and
-pre-staging the file all fail for a non-owning caller. In practice it
-succeeds only for root or whichever single user already owns the staged
-file; anyone else gets "could not stage the ACP server in /opt/5dive", which
-reads like a broken install rather than a known, root-only limitation.
-Requires a code fix (stage to a per-user path, or drop the chmod) — not
-fixable by permission arrangement on the host.
+**Known defect (2026-08-10): the DEFAULT stage directory is root-only. Set
+`ACP_RUN_DIR` to a writable path and it works.**
+
+```
+ACP_RUN_DIR="$HOME/.cache/5dive-acp" 5dive acp     # works as any user
+```
+
+The staging step unconditionally rewrites *and* `chmod`s
+`${ACP_RUN_DIR:-/opt/5dive}/acp-server.ts` on every invocation, and that chmod
+needs *ownership* of the file rather than write access to it. `/opt/5dive` is
+`root:root`, so a non-root caller gets "could not stage the ACP server in
+/opt/5dive" — which reads like a broken install rather than a wrong stage
+directory. Note the failure survives every host-side permission arrangement
+(group-writable dir, group-writable file, pre-staging the file as root): once
+the file exists and someone else owns it, the unconditional chmod fails for
+everyone but that owner. Pointing `ACP_RUN_DIR` at a directory the caller owns
+sidesteps all of it, because the caller then owns the file it stages.
+
+**If you are registering 5dive as an ACP runtime in a client (Buzz, Zed), set
+`ACP_RUN_DIR` in the harness's env-var field.** Without it the spawn fails on
+first launch for any non-root user.
+
+The underlying fix is still worth making — stage per-user by default, or skip
+the chmod when the file is already correct — so that the verb works with no
+environment set up. Until then the env var is a complete workaround, not a
+partial one.
 
 ## Models
 
