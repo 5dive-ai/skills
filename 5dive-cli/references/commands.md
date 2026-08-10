@@ -2,7 +2,7 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.18.6** (commit `089f7d2`, 2026-08-03).
+Synced to CLI **0.19.11** (commit `35af66f`, 2026-08-10).
 
 ## Top-level
 
@@ -33,10 +33,14 @@ Synced to CLI **0.18.6** (commit `089f7d2`, 2026-08-03).
 5dive up | down | ps | export        # declarative fleet (5dive.yaml)
 5dive team import <slug|path> | team ls
 5dive crew       ...                 # host a CrewAI crew (install/secret/run/show/list/uninstall)
-5dive secret write <KEY> --connector=<name>   # root-only credential drop, value on stdin
+5dive secret write <KEY> --connector=<name> [--task=<DIVE-N>]   # root-only credential drop, value on stdin
+                                               # (--task clears that task's pending secret gate on a
+                                               # confirmed write — the secure-drop path)
 5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
 5dive proof      ...                 # zero-human autonomy badge publisher (on/off/status/scorecard/publish/tick)
 5dive trace      <id|DIVE-N> [--json] [--no-audit]   # read-only origin/lifecycle/gate-provenance for one task
+5dive ui         [--port=8735] [--host=127.0.0.1]    # local web UI: org chart, queue, gates (read-only, no sign-in)
+5dive acp                            # speak ACP over stdio, spawned BY a client (Buzz, Zed) — not interactive
 5dive watch [--interval=N]           # htop-style live view (interactive TTY)
 5dive doctor  [--fix] [--dry-run] [--category=deps|types|auth|creds|registry|shelld|channels|host|memory]
 5dive selfcheck [--json] [--only=<probe,...>] [--full] [--assume-clean] [--strict] [--allow=<probe,...>] [--report=<file>] [--label=<env>] [--list]
@@ -55,7 +59,7 @@ Synced to CLI **0.18.6** (commit `089f7d2`, 2026-08-03).
 box, or `--isolation=admin`) can run the root surfaces (`agent create/config/
 pair`, `heartbeat on/off`, `doctor --fix`, `fleet add/rm`, `self-update`). The
 no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
-`market`, `agent list/info` — run from any agent.
+`market`, `agent list/info`, `ui` — run from any agent.
 
 ## Agents
 
@@ -102,11 +106,20 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                               # (root; replaces raw systemctl in the admin sudoers — sudo-rs safe)
 5dive agent stats   <name> | --all            # --all = whole fleet, incl. health hints
 5dive agent logs    <name> [--follow] [--lines=N] [--tmux]
-5dive agent send    <name> <text...> [--from=<sender>] [--raw]
+5dive agent send    <name> <text...>|--message=<text>|--message-file=<path>
+                                     [--from=<sender>] [--raw] [--wake]
                                      [--reply-to-chat=<id> [--reply-to-msg=<id>]]
-5dive agent ask     <name> <text...> [--from=<sender>] [--timeout=120]
-                                     [--idle-secs=5] [--poll-secs=2]
+                                     # --message-file reads the body VERBATIM from a file (DIVE-2627) — use it
+                                     # for any message that quotes CLI verbs (backticks/$() in --message=
+                                     # execute as you otherwise). --wake starts a stopped agent's unit and
+                                     # delivers once its prompt is up, instead of failing with exit 8.
+5dive agent ask     <name> <text...>|--message=<text> [--from=<sender>] [--timeout=120]
+                                     [--idle-secs=5] [--poll-secs=2] [--buffer-lines=2000]
+                                     [--allow-unfenced]
                                      [--reply-to-chat=<id> [--reply-to-msg=<id>]]
+                                     # --allow-unfenced restores best-effort pane-scraping for a reply that
+                                     # isn't fenced (refused when --from=council*: a seat that can't fence
+                                     # must surface as a capture failure, never a scraped guess)
 5dive agent <name>  tui                       # attach this terminal
 5dive agent install <type> [--upgrade]        # install (or, with --upgrade/--force/-u, reinstall @latest) the type's binary
 5dive agent set-account <agent> <account|default>   # alias for `agent config set auth-profile=`
@@ -223,6 +236,10 @@ anything blocks on stdin until the caller's timeout.
 5dive agent auth poll   <session_id>                     # {state, url, error}
 5dive agent auth submit <session_id> --code=<callback>
 5dive agent auth cancel <session_id>
+5dive agent auth reap   [--ttl=<secs>] [--max-age=<secs>] [--dry-run]
+                        # kill abandoned login processes (non-terminal, older than --max-age) and drop
+                        # old terminal session dirs (older than --ttl); also runs opportunistically
+                        # from `auth start` so the fleet self-heals without a cron entry
 ```
 
 ## Accounts (named auth profiles)
@@ -312,6 +329,7 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              # no --none/--clear to detach; opting out stays add-time
 5dive task set-branch <id|DIVE-N> <branch>   # DIVE-1462/1697: bind the task to a git branch for
                                              # delegated push; writes/updates a 'Branch: <name>' body line
+5dive task set-title <id|DIVE-N> <text...>          # rename (single line, <=200 chars); refused once done/cancelled
 5dive task set-body <id|DIVE-N> <text...> [--append]
                                              # DIVE-1920: edit a task's body after creation. Default
                                              # OVERWRITES the body; --append tacks text on (blank-line
@@ -706,7 +724,8 @@ flags/defaults for the rest — fails if neither a TTY nor `--yes` is present.
 ## Push (delegated GitHub push-for-review)
 
 ```
-5dive push <id|DIVE-N> [--branch=<b>] [--repo=<url>] [--dry-run]
+5dive push <id|DIVE-N> [--branch=<b>] [--repo=<url>] [--dry-run] [--yes|-y]
+5dive push <id|DIVE-N> --open-pr[=<base>] [--pr-title=<t>] [--pr-body-file=<f>] [--pr-draft]
 sudo 5dive push setup [--author="Name <email>"]
 ```
 
@@ -718,6 +737,15 @@ GitHub-App-installation token scoped to just that repo, pushes, and discards
 it. Needs `agent create --can-push` on the calling agent (see Agents, above).
 `push setup` (root) scaffolds the App env file / checks for the private key
 and reports readiness — never pass the key itself on argv.
+
+`--open-pr[=<base>]` (DIVE-2605) opens the pull request on the same root-side
+rail immediately after the push, as `5dive-bot`; `<base>` overrides the
+default base branch. `--pr-title`/`--pr-body-file`/`--pr-draft` shape that PR
+and are refused with a usage error if passed without `--open-pr` (a body you
+think you attached but that silently did nothing). `--pr-body-file` reads the
+body from a file, not argv/a quoted string. `--yes`/`-y` is accepted (does not
+error) but as of this sync isn't read anywhere past argument parsing — treat
+it as a no-op, not a confirmation bypass.
 
 ## Deploy (delegated PRODUCTION deploy — INST-5)
 
@@ -792,6 +820,10 @@ loop.
 5dive loop collect --handles=<id,id,…>
 5dive loop status  --handle=<loopId>          # read-only single-loop drilldown
 5dive loop install <slug> --onto=<agent> [--cron="…"] [--ceiling=<tokens>] [--dry-run]
+5dive loop uninstall <slug> --from=<agent> [--purge-skills]
+                                               # removes the recurring TEMPLATE row only; already-materialized
+                                               # instances are left alone. Skills stay by default (the agent
+                                               # may use them elsewhere); --purge-skills also removes them.
 5dive loop show <slug>                        # peek at a marketplace loop pack before install
 ```
 
@@ -818,6 +850,16 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 5dive heartbeat off <name>                                # stop waking (keeps settings)
 5dive heartbeat ls                                        # enrolled + next-wake + queued count
 5dive heartbeat tick                                      # root cron driver — wired at provision; don't call
+5dive heartbeat wake-mode <name> [always_on|cold] [--cap=<n>] [--sleep-after=<min>]
+                                                           # no mode/flags => print current mode/budget/sleep/cost.
+                                                           # 'cold' opts an agent into reactive wake-on-alert with
+                                                           # a wakes/day budget cap (default 24) so a chatty
+                                                           # trigger can't thrash it; a cold agent idle with no
+                                                           # open work auto-sleeps (systemctl stop) after
+                                                           # --sleep-after minutes (default 15m) and wakes again
+                                                           # on the next trigger. 'always_on' (default) is
+                                                           # unchanged; some agents may be pinned always-on and
+                                                           # refuse 'cold'.
 ```
 
 `<dur>`: minutes (`30`), or `45m` / `2h` / `1h30m`. `fresh` (default on) sends
@@ -893,6 +935,30 @@ in text mode whenever audit is consulted; `--no-audit` skips reading the log
 regardless of the task's own status; tracing a cancelled or stuck task is
 not itself a failure.
 
+## Web UI (DIVE-2655)
+
+```
+5dive ui                        # serve on http://127.0.0.1:8735 (Ctrl-C to stop)
+5dive ui --port=9000            # pick the port
+5dive ui --host=<addr>          # loopback only unless FIVE_UI_ALLOW_REMOTE=1 (there is no sign-in)
+5dive ui --data                 # print the JSON the views render (no server)
+5dive ui --html                 # print the page itself (no server)
+5dive ui --once                 # serve exactly one request, then exit (tests/probes)
+```
+
+The free single-host web UI: three read-only views (org chart, queue, gates)
+served by the CLI itself, reading only the LOCAL task store and LOCAL org
+chart — no fleet roll-up, no aggregation across boxes (that's the paid
+tier). The HTTP surface answers GET/HEAD on exactly three paths and 405s
+every other method, so no client-side code can make it write; anything that
+mutates state already has a CLI verb. **No accounts, so no routable bind**:
+`--host` accepts loopback addresses only (`127.x`, `::1`, `localhost`);
+binding elsewhere needs `FIVE_UI_ALLOW_REMOTE=1` set deliberately, and warns
+loudly at startup that the board and gates are then readable by anyone who
+can reach the port. Needs `python3` (stdlib only — no pip/venv) to hold the
+socket; bash can't listen on one and a serial `nc -l` loop drops a browser's
+second connection.
+
 ## Actor-routed gh (DIVE-2448)
 
 ```
@@ -920,6 +986,7 @@ rather than silently guessing.
 
 ```
 5dive whoami [--json]
+5dive whoami --for=<id|DIVE-N> [--json]
 ```
 
 Prints the actor (unix principal + registry agent), authority
@@ -934,10 +1001,21 @@ or `getent` (the last two are PATH-resolved and therefore spoofable).
 (`auth_required`) rather than printing `unknown` with a success code, so
 `5dive whoami >/dev/null` is itself a usable measurability check.
 
+**`--for=<id|DIVE-N>` (DIVE-2519) renders the RECORDED authority chain for
+one board row instead of the current process** — who created / started /
+delivered / answered-a-gate-on / closed it, and under whose authority, read
+from the ledger. Scope it with `--for=task:DIVE-N`, `gate:DIVE-N`, or
+`action:DIVE-N`. Every link in the chain resolves to one of three verdicts:
+`measured` (an event of the right kind exists and names an identity), `n/a`
+(the state row says the transition never happened — by design, not a gap),
+or `unmeasurable` (the state row says it DID happen and the record can't say
+who or under what authority). **Exit 1 when a link that HAPPENED is
+unmeasurable** — distinct from a clean `n/a`.
+
 ## Digest & supervisor
 
 ```
-5dive digest [--7d|--24h] [--send]           # standup: shipped 24h / in progress / open gates / burn / heartbeat health
+5dive digest [--7d|--30d|--24h] [--send]     # standup: shipped 24h(default)/window / in progress / open gates / burn / heartbeat health
                                              # --send delivers to the paired Telegram chat (root)
 5dive digest on --at=<hour> | digest off | digest status   # daily auto-delivery (default OFF)
 
@@ -1027,9 +1105,10 @@ Where `doctor` asks "is the box healthy", `selfcheck` asks "can our own
 instruments still tell?" — it runs each critical rail FOR REAL against a
 throwaway, isolated state (own `STATE_DIR`/`TASKS_DB`/`AUDIT_LOG` per probe,
 never the live store) and asserts the *effect* it's supposed to have, not the
-string it printed. `--list` prints the probe corpus: `gate-delivery`,
-`audit-root`, `audit-nonroot`, `harness-verdicts`, `bundle-integrity`,
-`snapshot-rails`, `scorecard-honesty`.
+string it printed. `--list` prints the probe corpus: `lead-clear-seal`,
+`t2-forge`, `gate-delivery`, `audit-root`, `audit-nonroot`,
+`harness-verdicts`, `bundle-integrity`, `snapshot-rails`,
+`scorecard-honesty`.
 
 Each probe reports `pass` | `fail` | `not-reached` | `error`. **`not-reached`
 is a first-class state, never folded into `pass`** — a probe whose
@@ -1055,6 +1134,38 @@ expects callers to branch on `data.summary`; **`selfcheck --json` exits
 non-zero on failure** — `E_GENERIC` (1) if any probe failed, errored, or was
 an unexplained not-reached (also under `--strict`, any not-reached at all).
 0 only if every probe passed or was a reasoned not-reached.
+
+## ACP (Agent Client Protocol — DIVE-3017)
+
+```
+5dive acp
+5dive acp -h | --help    # usage one-liner; takes no other arguments
+```
+
+Speaks ACP over stdin/stdout so an ACP client — Buzz (block/buzz), Zed —
+can select 5dive as a coding-agent runtime. **Not interactive: the client
+spawns it**, so this is not a verb a human or another agent runs directly.
+A NATIVE verb, not an adapter: 5dive registers as its own runtime
+(`command: "5dive", args: ["acp"]`) rather than going through a third-party
+bridge.
+
+A session **ATTACHES to a named fleet agent** (its memory, tasks, org
+position and heartbeat intact) instead of opening a blank one — the roster
+is exposed as ACP `availableCommands`, so `/<name>` or `/attach <name>`
+picks the agent and `/agents` re-lists the fleet. Each prompt on an attached
+session becomes one `5dive agent ask <name> <text> --timeout=${ACP_ASK_TIMEOUT:-180}`
+turn — a real turn on a real agent, streamed at the granularity `agent ask`
+prints at, not per-token.
+
+Runs on **bun**, staged from an embedded server into `${ACP_RUN_DIR:-/opt/5dive}/acp-server.ts`
+at each invocation. Resolves its own bun binary — `ACP_BUN_BIN` overrides,
+then `/usr/local/bin/bun` / `~/.bun/bin/bun`, then the caller's own `PATH`
+(load-bearing off-box: a Buzz user on their own Mac has none of this VM's
+fixed paths), then a `sudo -u claude` login-shell probe. Missing bun fails
+loud (`E_NOT_INSTALLED`) with an install hint, rather than dying silently
+once the ACP client has already spawned it. `exec`s into bun on success, so
+the row this verb writes to the audit log is emitted *before* the exec
+(the dispatcher's own EXIT-trap audit row never fires past an `exec`).
 
 ## Models
 

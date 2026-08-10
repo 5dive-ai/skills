@@ -273,8 +273,11 @@ routing decision without running anything.
 
 - `references/commands.md` — every subcommand and flag, copy/pasteable.
   Includes the less-frequent top-level verbs not recapped above: `deploy`
-  (delegated production deploy, INST-5), `bug` (diagnostic issue filing) and
-  `constitution` (front door onto the machine-enforced guardrails).
+  (delegated production deploy, INST-5), `bug` (diagnostic issue filing),
+  `constitution` (front door onto the machine-enforced guardrails), `ui`
+  (local read-only web UI: org chart/queue/gates, DIVE-2655) and `acp`
+  (speak ACP over stdio so a client like Buzz/Zed can select 5dive as a
+  coding-agent runtime — spawned BY the client, not run directly, DIVE-3017).
 - `references/exit-codes.md` — exit codes & error classes.
 - `references/paths.md` — on-disk state layout (only for debugging).
 - `5dive-cli-extras` skill — crew hosting, accounts, auth recovery, compose/
@@ -289,6 +292,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.18.6** (commit `089f7d2`, 2026-08-03). A given box's
+_Synced to 5dive CLI **0.19.11** (commit `35af66f`, 2026-08-10). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
