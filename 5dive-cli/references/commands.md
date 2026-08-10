@@ -1167,6 +1167,17 @@ once the ACP client has already spawned it. `exec`s into bun on success, so
 the row this verb writes to the audit log is emitted *before* the exec
 (the dispatcher's own EXIT-trap audit row never fires past an `exec`).
 
+**Known defect (2026-08-10): broken for a normal (non-root) user today.** The
+staging step unconditionally `chmod`s `${ACP_RUN_DIR:-/opt/5dive}/acp-server.ts`
+on every invocation, and that chmod needs *ownership* of the file, not just
+write access to it — group-writable dir, group-writable file, and
+pre-staging the file all fail for a non-owning caller. In practice it
+succeeds only for root or whichever single user already owns the staged
+file; anyone else gets "could not stage the ACP server in /opt/5dive", which
+reads like a broken install rather than a known, root-only limitation.
+Requires a code fix (stage to a per-user path, or drop the chmod) — not
+fixable by permission arrangement on the host.
+
 ## Models
 
 ```
