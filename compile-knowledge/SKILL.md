@@ -31,6 +31,27 @@ agent gets smarter over time instead of relearning the same things.
 Rule of thumb: "only I act on this" → memory. "Anyone on my team might need
 this" → shared wiki. Cross-link between them with `[[slug]]` when they relate.
 
+## The async pipeline vs. you — division of labor
+
+Some platforms run an automatic consolidation pass over finished sessions (on
+5dive: `5dive memory consolidate`, scheduled for you by the heartbeat). If your
+platform has one, know what it covers and what only you can do:
+
+- **AUTOMATIC — plain facts.** The pass distils your FINISHED session
+  transcripts into memory atoms in your own store. It never reads the live
+  session, and nothing it writes leaves your box. You do NOT need to hand-copy
+  plain facts out of a session to keep them — that is what stops knowledge
+  dying with the context window.
+- **STILL YOURS — judgement.** A wiki page, a decision and its reason, a gap
+  analysis, the CAUSE behind a finding: the pipeline can only lift what is
+  stated in the transcript, and a conclusion you drew is not lying there. It
+  also cannot publish to a shared wiki — it has no store selector, and shared
+  stores are deny-default by design — so publishing to the team store stays a
+  curated act, and that act is yours.
+
+This narrows what you compile; it does not replace compiling. Judgement-shaped
+knowledge still goes through the procedure below, before you close the task.
+
 ## Before you write — the hygiene gate
 
 Compile ONLY a durable, non-obvious fact. Skip and move on if it is:
