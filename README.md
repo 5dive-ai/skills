@@ -18,7 +18,6 @@ Skills published by [5dive](https://5dive.ai?utm_source=github&utm_medium=referr
 | [`code-review`](./code-review) | Review a diff or pull request for correctness first, quality second. Logic bugs, edge cases, error handling, races, missing tests, API misuse, performance, readability, with a severity model and clear approve vs request-changes verdict. |
 | [`verify`](./verify) | Grade a delivered claim against the artifact instead of against the report of it. Split a claim into checkable assertions, grade each against a named instrument, and emit a three-state verdict — pass, fail, or not-reached — with what you did *not* check stated explicitly. |
 | [`deep-research`](./deep-research) | Run structured, multi-source research that produces a trustworthy, cited synthesized answer rather than a pile of links. Scope the question, fan out across sources, judge source quality, adversarially verify each key claim, separate fact from inference, and report with explicit confidence. |
-| [`openmontage`](./openmontage) | Produce real videos end-to-end with [OpenMontage](https://github.com/calesthio/OpenMontage), an open-source agentic video production system you drive from your coding agent — script, assets, stock-footage retrieval, narration, timeline, render. Installs on demand; works with no paid API keys. AGPL-3.0 upstream, so keep it on the machine making the video. |
 
 ## Quick start (any coding agent)
 
