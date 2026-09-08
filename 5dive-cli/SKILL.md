@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents — plus the shared task queue and org chart. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send` / `agent ask`. Also for filing and tracking shared work (`5dive task add/ls/done`), the org chart (`5dive org tree`), parking a blocking question on a human (`task need`), and a quick recall of team memory (`5dive memory search`). For everything else the CLI can do — crew hosting, multi-account auth, auth recovery, declarative fleets/compose, goal DAGs, objectives, loops, compiling into the wiki, org-chart writes, governance votes, digest/usage/supervisor/fleet/diagnose, telegram pairing, the persona market, BYO providers, and the company wizard — see the `5dive-cli-extras` skill. When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents — plus the shared task queue and org chart. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send` / `agent ask`. Also for filing and tracking shared work (`5dive task add/ls/done`), the org chart (`5dive org tree`), parking a blocking question on a human (`task need`), and a quick recall of team memory (`5dive memory search`). For everything else the CLI can do — crew hosting, multi-account auth, auth recovery, declarative fleets/compose, goal DAGs, objectives, loops, compiling into the wiki, org-chart writes, governance votes, digest/usage/supervisor/fleet/diagnose, telegram pairing, the persona market, BYO providers, the company wizard, plugins (`5dive plugin`), seat liveness (`5dive liveness`), gate owners (`5dive human`), per-attempt run history (`5dive run`), event triggers (`5dive trigger`), host remediation (`5dive host`) and the nostr handset rail (`5dive buzz`) — see the `5dive-cli-extras` skill. When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
 ---
 
 # 5dive-cli
@@ -44,11 +44,13 @@ Everything the CLI does maps onto these resources on the host:
   running the chosen CLI in a restart loop.
 - Auth is decoupled. You authenticate a *type* once; every agent of that
   type inherits the credentials via `EnvironmentFile`.
-- A **channel** (`telegram` / `discord` / `dashboard` / `none`, comma-listable)
-  is the inbound message surface. All agent types support channels; each agent
-  needs its own bot token. `dashboard` (claude-only, token-free) is web-dashboard
-  chat and is folded into every claude create by default — `--channels=none`
-  opts out.
+- A **channel** (`telegram` / `discord` / `dashboard` / `buzz` / `none`,
+  comma-listable) is the inbound message surface. All agent types support
+  channels; `telegram`/`discord` each need their own bot token. `dashboard`
+  (claude-only, token-free) is web-dashboard chat and is folded into every
+  claude create by default — `--channels=none` opts out. `buzz` is the nostr
+  handset rail; it is wired by `agent buzz enable`, not by a token (see
+  `5dive-cli-extras`).
 - The CLI is idempotent and safe to call from another agent, but **`sudo` is
   gated by isolation tier** (DIVE-1002). New agents default to `standard` —
   zero sudo. Only the first agent on a fresh box, or one created with
@@ -127,7 +129,16 @@ wraps the payload as `[5dive-msg from=<you> id=<8-hex>] <your text>` so the
 receiver knows a peer is pinging it (only sends from `agent-*` users get
 wrapped; `--raw` skips wrapping, `--from=<label>` overrides the inferred name).
 **Quote the body in single quotes and keep backticks / `$()` out of it** — the
-message passes through a shell.
+message passes through a shell. For any body that quotes CLI verbs, use
+`--message-file=<path>` instead (DIVE-2627): inside a double-quoted
+`--message=`, backtick-quoted verbs RUN as command substitution **as you**, the
+words are deleted, and the send still prints OK.
+
+Scheduled sends (cron, systemd timers) need `--wake`: without it a send into a
+stopped agent fails with exit 8 and is dropped — there is no queue and no retry.
+`--wake` starts the unit and delivers once the prompt is up. It needs root,
+refuses an agent stopped on purpose (`desiredState=stopped`), and its worst case
+is 105s — size a timer's `TimeoutStartSec` above that.
 
 To reply, send back to the named sender, optionally prefixing `[re=<id>]` so
 they can match it to their question:
@@ -178,6 +189,20 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 5dive task done  DIVE-7 --result="one-line summary first; detail below" --json
 5dive task block DIVE-9 --by=DIVE-7 --json   # DIVE-9 waits on DIVE-7
 
+# On a row that carries a verifier, the maker DELIVERS instead of closing;
+# the verifier passes (`verify`) or bounces it back (`reject`).
+5dive task deliver DIVE-7 --pr=<url> --result="..." --json
+5dive task reject  DIVE-7 --feedback="what to fix" --json
+
+# Every `ls` carries a `gate` column: HUMAN:<type> a person owes an answer,
+# <seat>:<type> an agent does, `answered:<retire>`, `-` nothing.
+5dive task ls --gated --json          # only rows holding a live gate
+5dive task ls --gated=human --json    # exactly the `task inbox` set
+
+# Nothing is moving and you can't see why: every open row nothing will
+# dispatch, and the verb that clears each one (DIVE-3784).
+5dive task doctor --json
+
 # Who reports to whom, at a glance:
 5dive org tree --json
 ```
@@ -200,10 +225,9 @@ it and don't guess — gate it:
 # --type: decision | secret | approval | manual | access
 # -> task goes blocked; the human gets an alert with tap buttons.
 
-5dive task inbox --json        # everything currently waiting on a human
+5dive task inbox --json        # every unanswered HUMAN gate in the fleet
+5dive task queue --json        # gates ROUTED TO YOU, filed without waking you
 5dive task answer DIVE-12 --value="flag" --json   # records + unblocks + pings the owner
-# You (an agent) can only `task answer` a tier-0/1 DECISION gate. approval /
-# secret / manual gates are HUMAN-ONLY (a Telegram tap or a non-agent SUDO_UID).
 ```
 
 Keep `--ask` to ONE crisp question with ~1 line of context; heavy detail
@@ -212,11 +236,31 @@ the alert leads with your recommendation so the human can one-tap it.
 
 **Risk tiers (`--tier=0|1|2`):** `0` auto-clears immediately (needs
 `--recommend`, no ping); `1` pings but auto-applies the recommendation if
-unanswered 48h (default for `decision`); `2` is a hard human gate that never
-auto-applies (default for approval/secret/manual). Money, public comms,
-secrets, destructive and brand asks are floored to tier 2 regardless of the
-flag. See `5dive-cli-extras` for `task park`/`escalate`/`clear-recs`, the
-`--type=access` + `--probe` self-check, and precedent prefill.
+unanswered 48h; `2` never auto-applies. Money, public comms, secrets,
+destructive and brand asks are floored to tier 2 regardless of the flag.
+
+**Who can clear it is set by TYPE, not by difficulty — check before you file,
+not after `task answer` refuses you (DIVE-3228):**
+
+| type | default tier | who clears it at that default |
+|---|---|---|
+| `decision` | 1 | any agent |
+| `approval` | **1** — not 2 | the routed lead |
+| `access` | 2 | the routed lead (lead-clearable *at* the default) |
+| `manual` | 2 | human only — a step only a person can perform |
+| `secret` | 2 | human only, **at every tier**; never routed |
+
+Pinning `--tier=2` yourself, or tripping a category floor, makes `approval` and
+`access` human-only too. On any type, `--needs=spend_authority|human_tap|
+secret_provision` is human-only by declaration and outranks the tier.
+So **never hand-pass `--tier=1` on an approval to keep it off a human** — that
+is already the default and the flag is a no-op.
+
+A routed gate QUEUES for the reviewer's next natural wake rather than waking
+their session; `--urgent` pings at file time. It is not `--recommend` — "I think
+the answer is X" and "this cannot wait" are separate claims. See
+`5dive-cli-extras` for `task park`/`escalate`/`clear-recs`/`need --withdraw`,
+the `--type=access` + `--probe` self-check, and precedent prefill.
 
 ### Search team memory before re-deriving
 
@@ -226,8 +270,20 @@ flag. See `5dive-cli-extras` for `task park`/`escalate`/`clear-recs`, the
 
 Read-only, no sudo, BM25-ranked snippets with file+heading provenance. Reach
 for it before re-deriving past decisions or debugging something a teammate
-already hit. For the write-path (`memory add`, compiling into the shared
-wiki) and hygiene checks, see `5dive-cli-extras`.
+already hit.
+
+On a large store, prefer **two-stage recall** (DIVE-3821) — it buys you more
+candidates per token than snippets do:
+
+```bash
+5dive memory search "hetzner capacity" --index   # stage 1: slug + one-liner + score, no bodies
+5dive memory get <slug> [<slug>...]              # stage 2: full bodies, only what you chose
+```
+
+An empty stage-1 result is evidence of absence; a short index is not. Search
+with the words the FACT would use, not the words your task uses. For the
+write-path (`memory add`, compiling into the shared wiki), `memory router`,
+`memory check` and hygiene, see `5dive-cli-extras`.
 
 ### Check your own identity, or run `gh` as the right one
 
@@ -275,9 +331,15 @@ routing decision without running anything.
   Includes the less-frequent top-level verbs not recapped above: `deploy`
   (delegated production deploy, INST-5), `bug` (diagnostic issue filing),
   `constitution` (front door onto the machine-enforced guardrails), `ui`
-  (local read-only web UI: org chart/queue/gates, DIVE-2655) and `acp`
+  (local read-only web UI: org chart/queue/gates, DIVE-2655), `acp`
   (speak ACP over stdio so a client like Buzz/Zed can select 5dive as a
-  coding-agent runtime — spawned BY the client, not run directly, DIVE-3017).
+  coding-agent runtime — spawned BY the client, not run directly, DIVE-3017),
+  `liveness` (is a seat alive against an artifact it WROTE, DIVE-3778),
+  `plugin` (install/enable/rollback plugins + marketplaces), `human`
+  (the people who can CLEAR a gate, DIVE-3342), `run` (one attempt by one
+  agent at one task — the unit beneath `trace`), `trigger` (signed external
+  events become ordinary tasks) and `host` (hardened unit/journal/cron
+  remediation under the CLI-root grant).
 - `references/exit-codes.md` — exit codes & error classes.
 - `references/paths.md` — on-disk state layout (only for debugging).
 - `5dive-cli-extras` skill — crew hosting, accounts, auth recovery, compose/
@@ -292,6 +354,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.19.11** (commit `35af66f`, 2026-08-10). A given box's
+_Synced to 5dive CLI **0.27.1** (commit `fabce38d`, 2026-09-08). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

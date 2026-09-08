@@ -2,7 +2,7 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.19.11** (commit `35af66f`, 2026-08-10).
+Synced to CLI **0.27.1** (commit `fabce38d`, 2026-09-08).
 
 ## Top-level
 
@@ -10,6 +10,9 @@ Synced to CLI **0.19.11** (commit `35af66f`, 2026-08-10).
 5dive agent      ...                 # agent CRUD + comms
 5dive account    ...                 # named auth profiles (group sign-ins)
 5dive market     ...                 # browse/search the agent market (no sudo)
+5dive market --kind=plugin           # browse PLUGINS (voice, telegram, dashboard, buzz)
+5dive plugin     add|list|remove|upgrade|enable|disable|rollback <plugin>[@<marketplace>]
+5dive plugin     marketplace add|list|upgrade|remove ...
 5dive hire       <role> [--from-market]   # sugar: create a teammate (+ org slot)
 5dive fire       <name>              # sugar: remove a teammate (alias of agent rm)
 5dive company    [--yes] [flags]     # onboarding wizard: project + objective + goal in one shot
@@ -39,6 +42,12 @@ Synced to CLI **0.19.11** (commit `35af66f`, 2026-08-10).
 5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
 5dive proof      ...                 # zero-human autonomy badge publisher (on/off/status/scorecard/publish/tick)
 5dive trace      <id|DIVE-N> [--json] [--no-audit]   # read-only origin/lifecycle/gate-provenance for one task
+5dive run        ls|show|events|logs|retry|metrics   # ONE attempt by ONE agent at ONE task (the unit beneath trace)
+5dive liveness   [--agent=<n>] [--window=<min>]      # is a seat alive against an artifact it WROTE (DIVE-3778)
+5dive human      add|ls|show|link|unlink|owner|recipient|rm   # the people who can CLEAR a gate (DIVE-3342)
+5dive trigger    add|ls|show|deliveries|rotate|enable|disable  # signed external events -> ordinary tasks
+5dive host       unit|journal|cron ...               # hardened host remediation under the CLI-root grant
+5dive buzz       pair [--timeout=<s>] | owner [--envelope]     # ONE QR per SERVER: pair the phone as box OWNER
 5dive ui         [--port=8735] [--host=127.0.0.1]    # local web UI: org chart, queue, gates (read-only, no sign-in)
 5dive acp                            # speak ACP over stdio, spawned BY a client (Buzz, Zed) — not interactive
 5dive watch [--interval=N]           # htop-style live view (interactive TTY)
@@ -316,7 +325,16 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                [--task-budget=<tokens|$cost>] # per-run spend cap for the on-host loop (DIVE-824)
                [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>] [--no-verify]
                [--branch=<name>]              # seed a 'Branch: <name>' delegated-push binding (DIVE-1697)
+               [--customer]                   # the row is customer-facing
+               [--already-blocked=<what it blocked>]   # the AUDITED escape from the internal-filing cap:
+                                             #   use it when the defect ALREADY blocked shipped work,
+                                             #   instead of arguing the cap
 5dive task ls   [--status=<s>] [--assignee=<agent>] [--mine] [--all] [--recurring] [--project=<key>]
+                [--gated[=human|agent]]      # DIVE-3785: only rows holding a live gate. The `gate` column is
+                                             #   on EVERY ls — HUMAN:<type> a person owes an answer,
+                                             #   <seat>:<type> an agent does, answered:<retire> the answer
+                                             #   survives only in gate-history, '-' nothing.
+                                             #   --gated=human is exactly the `task inbox` set
                                              # default: open, priority-ordered; --recurring lists only
                                              #   templates the scheduler still drives (schedule set,
                                              #   status=todo); --recurring --all lists every template
@@ -329,6 +347,27 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              # no --none/--clear to detach; opting out stays add-time
 5dive task set-branch <id|DIVE-N> <branch>   # DIVE-1462/1697: bind the task to a git branch for
                                              # delegated push; writes/updates a 'Branch: <name>' body line
+5dive task set-parent <id|DIVE-N> <DIVE-N|none>     # DIVE-3275: attach/detach a parent. Audited, works on a
+                                             # CLOSED row. Name the parent by IDENT — a bare number is the
+                                             # global row id, which is NOT the ident number
+5dive task orphans [--all]                   # DIVE-3344: rows whose assignee/verifier/creator is not a
+                                             # registered agent — i.e. undispatchable
+5dive task doctor [--fix <id> [--to=<agent>] [--dry-run]]
+                                             # DIVE-3784: every open row nothing will dispatch, and WHY —
+                                             # no revisit anchor, a stale blocker edge, a park past its wake
+                                             # or with none, a seat nothing wakes. A bare run changes
+                                             # nothing and each finding names the verb that clears it.
+                                             # --fix runs that verb for ONE named row (there is no --all);
+                                             # a dead lane needs --to=<agent>, and the destination must
+                                             # itself be a seat something wakes (DIVE-3826)
+5dive task wip-cap-install [--relane=<lane>] # freeze each lane's current actionable count as its WIP ceiling
+5dive task set-overlap <tmpl> <skip|spawn> [bound]
+                                             # recurring template: does an OPEN instance suppress the next
+                                             # slot? `skip` means a run spanning more than one period is
+                                             # handled by simply not closing it
+5dive task set-budget <id> <tokens|$cost|none>      # ADVISORY only — nothing enforces it (DIVE-3343: a row's
+                                             # own token spend is not measurable). The per-agent cost budget
+                                             # is the control that actually halts
 5dive task set-title <id|DIVE-N> <text...>          # rename (single line, <=200 chars); refused once done/cancelled
 5dive task set-body <id|DIVE-N> <text...> [--append]
                                              # DIVE-1920: edit a task's body after creation. Default
@@ -346,6 +385,14 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task verify <id|DIVE-N> [--cmd="<cmd>"] [--no-done] [--timeout=<s>]
                                              # run a check; exit 0 => proven-done (flips to done)
 5dive task reject <id|DIVE-N> [--feedback="<what to fix>"]   # verifier FAIL: bounce to maker; escalate at max-iters
+5dive task merge <id|DIVE-N>                 # DIVE-3474: merge the PR on a row THIS seat graded PASS
+5dive task merge-unverified [--limit=N] [--since=Nd]   # DIVE-3526: re-derive the closes the merge gate
+                                             # could NOT check at the time
+5dive task merge-gate-selftest [--pr=<url>] [--json]   # can THIS seat's merge-gate actually query GitHub?
+                                             # Run it AS the seat in question — another seat's "available"
+                                             # is a fact about that seat
+5dive task gate-history <id|DIVE-N>          # displaced gates + when they retired. An `answered:<retire>`
+                                             # gate survives ONLY here
 5dive task merge-audit [--limit=N] [--json]  # DIVE-1935: retrospective, READ-ONLY sweep of DONE tasks
                                              # for a named PR that never merged (or merged red); never reopens
 5dive task reclaim <id|DIVE-N>|--all [--dry-run]
@@ -442,9 +489,20 @@ length) and refuses on a closed (done/cancelled) task; bounce it back with
 
 ```
 5dive task need <id|DIVE-N> --type=decision|secret|approval|manual|access
-                --ask="..." [--options=A|B] [--recommend="A"] [--tier=0|1|2]
-                [--secret-key=<ENV_VAR> --connector=<name>]   # type=secret only, together
+                --ask="..."|--ask-file=<path> [--options=A|B]
+                [--recommend="A"|--recommend-file=<path>] [--tier=0|1|2]
+                [--secret-key=<ENV_VAR> --connector=<name> | --out-of-band="<where>"]  # type=secret needs one
                 [--probe=<cmd>]                               # type=access only
+                [--needs=spend_authority|human_tap|secret_provision]   # declare the CAPABILITY the answer
+                                             #   requires. HUMAN-ONLY by declaration: outranks the tier and
+                                             #   every routing kind. If you cannot NAME the capability, it is
+                                             #   a decision you find uncomfortable, not a tier-2 gate
+                [--urgent]                   # DIVE-3474: a routed gate normally QUEUES for the reviewer's
+                                             #   next natural wake. --urgent pings at file time. It is NOT
+                                             #   --recommend: "the answer is X" and "this cannot wait" are
+                                             #   separate claims
+                [--mode=approve-to-send|confirm-after-send]   # type=approval: is the action already DONE?
+                [--discusses=<why>] [--rubber-stamp-ok="<why>"]
                                              # -> blocked, awaiting a human; risk-tiered
 5dive task need <id|DIVE-N> --withdraw       # DIVE-1401: cancel a still-pending gate the team itself
                                              # filed but that's now moot — filer, their lead/coordinator,
@@ -466,11 +524,28 @@ length) and refuses on a closed (done/cancelled) task; bounce it back with
 `--ask` is ONE crisp question (+~1 line context, recommendation up front); heavy
 detail goes in the task BODY. `--recommend` is strongly encouraged (for a
 decision it must match one of `--options`). Gate tiers: T0 auto / T1 48h
-auto-apply the recommendation / T2 hard floor. An agent can `task answer` only
-a **decision** gate — `approval`/`secret`/`manual`/`access` are HUMAN-ONLY
-(enforcement ON): they clear via a Telegram tap (per-gate `--human-proof` nonce,
-minted as root) or a non-agent `SUDO_UID`, never a bare agent-session `task
-answer`.
+auto-apply the recommendation / T2 hard floor.
+
+**Who can clear a gate is set by TYPE, not by difficulty (DIVE-3228). Check it
+BEFORE you file, not after `task answer` refuses you:**
+
+| type | default tier | who clears it at that default |
+|---|---|---|
+| `decision` | 1 | any agent |
+| `approval` | **1**, not 2 (DIVE-1284) | the routed lead |
+| `access` | 2 | the routed lead — lead-clearable *at* the tier-2 default |
+| `manual` | 2 | human only: a step only a person can perform |
+| `secret` | 2 | human only **at every tier**; never routed |
+
+A human clear is a Telegram tap (per-gate `--human-proof` nonce, minted as
+root) or a non-agent `SUDO_UID`. Pinning `--tier=2` yourself, or tripping a
+category floor on the ask, makes `approval` and `access` human-only too — and
+`--needs=<capability>` makes ANY type human-only by declaration.
+
+Corollary: hand-passing `--tier=1` on an `approval` to keep it off a human is a
+**no-op** — tier 1 is already its default. A no-op that looks like it did not
+work is what makes the next reach for `--needs=human_tap`, which bypasses
+lead/verifier routing by constant and pings the paired human.
 
 `--type=access` (DIVE-1243) is for "I'm blocked on a permission/grant I don't
 have." Pair it with `--probe=<cmd>` — a self-check that MUST currently fail
@@ -869,20 +944,54 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 
 ```
 5dive memory search "<query>" [--limit=N] [--max-tokens=T] [--roots=a,b]
-                              [--store=all|mine|wiki] [--agent=<name>]
+                              [--store=all|mine|wiki] [--agent=<name>] [--index]
                                              # BM25-ranked snippets + provenance; read-only, no sudo
                                              # --store all (default) | mine | wiki
                                              # --agent = another agent's store (per-user 0600 — root only)
+                                             # --index = STAGE 1 of two-stage recall (DIVE-3821): one row
+                                             #   per file (slug + one-line description + score), no bodies.
+                                             #   --limit defaults to 25 here. Measured on a 633-atom store:
+                                             #   8 index rows = 459 tok vs 8 snippets = 1008 tok
+5dive memory get <slug> [<slug>...] [--max-tokens=T] [--roots=a,b]
+                       [--store=all|mine|wiki] [--agent=<name>]
+                                             # STAGE 2: full bodies of the named atoms, over the same roots
+                                             # search ranks. `-` and `_` are interchangeable in a slug; an
+                                             # unknown slug names its near neighbours. Exits 4 only when
+                                             # NOTHING resolved — a partial fetch is a fetch
 5dive memory add --name=<kebab-slug> --description="<one-liner>"
                  [--type=user|feedback|project|reference] [--store=mine|wiki]
                  [--tags=a,b] [--valid-to=YYYY-MM-DD] [--supersedes=<slug>]
-                 [--confidence=high|medium|low] [--provenance="<source>"] [--force]
+                 [--confidence=high|medium|low] [--provenance="<source>"]
+                 [--evidence=<kind>:<ref>]... [--check='<cmd>' | --no-check="<why>"]
+                 [--no-dedup] [--force]
                                              # body on STDIN; writes a frontmatter file to your store
                                              # (or the shared wiki with --store=wiki), stamps provenance,
                                              # appends the index line; token/key tripwire (--force won't bypass)
+                                             # --check: a checkable fact says how to re-check itself, and
+                                             # `add` will not let it skip (DIVE-3885)
+5dive memory router [--root=<dir>] [--agent=<name>] [--budget=BYTES] [--recent=N] [--write]
+                                             # DIVE-3821: rebuild MEMORY.md as a small ROUTER instead of a
+                                             # flat enumeration. A flat index grows with the store and, past
+                                             # the ~24 KB load limit, the loader drops its TAIL with no error
+                                             # — the oldest facts stop existing silently. NOTHING is deleted.
+                                             # Dry-run by default; --write backs the old index up first and
+                                             # carries a <!-- router:keep-start/end --> block over verbatim
 5dive memory doctor [--roots=a,b] [--agent=<name>] [--code-root=<dir>] [--json]
                                              # hygiene: index drift, dangling [[links]], stale refs, near-dupes
 ```
+
+**Two-stage recall is the default posture on a large store**: `search --index`
+to see enough candidates to choose between, then `get` only what you chose. An
+empty stage-1 result is evidence of absence; a short router is not — and search
+with the words the FACT would use, not the words your task uses.
+
+An async pass (`5dive memory consolidate`, DIVE-3628, run for you by the
+heartbeat) distils FINISHED transcripts into memory atoms, so you do not have
+to hand-copy facts out of a session to keep them. What it cannot do is
+JUDGEMENT-shaped knowledge — a wiki page, a decision record, a gap analysis,
+the CAUSE behind a finding — because that is a claim you are making, not a fact
+lying in the transcript. Those you compile yourself, with
+`memory add --store=wiki` + an index line, **before** you close the row.
 
 ## Usage, cost & activity
 
@@ -902,6 +1011,80 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 
 ```
 5dive trace <id|DIVE-N> [--json] [--no-audit]
+```
+
+## Runs (one attempt by one agent at one task)
+
+```
+5dive run ls [--task=DIVE-N] [--agent=<n>] [--role=maker|verifier]
+             [--status=running|completed|failed|abandoned|parked] [--outcome=<s>]
+             [--since=<24h|7d|YYYY-MM-DD>] [--limit=N] [--json]
+5dive run show <RUN-ID> [--json]      # one attempt in full
+5dive run events <RUN-ID> [--json]
+5dive run logs <RUN-ID> [--follow] [--lines=N]
+5dive run retry <RUN-ID> [--json]
+5dive run metrics [--since=<24h|7d>] [--agent=<n>] [--json]
+```
+
+`trace` is the causal story ACROSS attempts; a run is the unit beneath it.
+
+## Liveness (DIVE-3778) — measured against artifacts a seat WROTE
+
+```
+5dive liveness                      # every registered seat + the box's own claude seat
+5dive liveness --agent=<name>       # one seat (does not need the registry)
+5dive liveness --window=<minutes>   # freshness window (default 60m)
+5dive liveness --json
+```
+
+Three verdicts, and the third never collapses into the other two:
+`alive` (a timestamped artifact this seat wrote, inside the window — it is
+named in the output), `no-effect` (every probe RAN and found nothing), and
+`not-reached` (at least one probe could not run and nothing positive was
+found — **UNKNOWN, not healthy**; this is the state a process-presence check
+silently calls green). Exit: 0 all alive · 4 some no-effect · 3 some
+not-reached · 2 usage.
+
+## Human accounts (DIVE-3342) — who can CLEAR a gate
+
+```
+5dive human add <id> [--name=] [--telegram=<chat id>] [--buzz=<npub>] [--discord=<id>]   # alias: set
+5dive human ls | show <id> | rm <id>
+5dive human link <id> --agent=<name>        # they own that agent's gates
+5dive human unlink <id> --agent=<name>
+5dive human owner <agent>                   # resolved owner of that agent
+5dive human recipient <ident|row id>        # who a gate on that row pages
+```
+
+READS (`ls`/`show`/`owner`/`recipient`) — any agent, no sudo. WRITES
+(`add`/`set`/`link`/`unlink`/`rm`) — **root only**: this table is trusted
+input to gate routing.
+
+## Triggers — signed external events become ordinary tasks
+
+```
+sudo 5dive trigger add github --name=<slug> --event=issues.labeled \
+     --repo=owner/repo --assignee=<agent> --where='label.name == "5dive"' \
+     --secret-from-stdin [--task-title=<title>] [--max-pending=50]
+sudo 5dive trigger add webhook --name=<slug> --event=<event.type> --role=<role> \
+     --secret-from-stdin [--where='actor == "service"']
+5dive trigger ls | show <name> | deliveries <name> [--limit=50]
+sudo 5dive trigger rotate <name> --secret-from-stdin
+sudo 5dive trigger enable|disable <name>
+```
+
+The secret never appears in argv — it is read from stdin on both `add` and
+`rotate`.
+
+## Plugins
+
+```
+5dive plugin list [--json]                              # installed, with version and tier
+5dive plugin add|remove|upgrade <plugin>[@<marketplace>] [--yes]
+5dive plugin enable|disable <plugin>[@<marketplace>]    # a flag flip; the code stays on disk
+5dive plugin rollback <plugin>[@<marketplace>] [<version>]
+5dive plugin marketplace add <source> [--as=<name>] | list [--json] | upgrade [<name>] | remove <name>
+5dive market --kind=plugin                              # browse before installing
 ```
 
 Reconstructs one task's story goal → ship from columns the row already
