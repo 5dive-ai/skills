@@ -1,6 +1,6 @@
 ---
 name: 5dive-cli-extras
-description: Extended `5dive` CLI recipes beyond the everyday core — see the `5dive-cli` skill first for spawning/messaging sibling agents and the basic task queue. Use THIS skill for hiring a ready-made persona off the agent market (`5dive market`, `hire --from-market`) or firing one (`5dive fire`), auth recovery (`error.class=auth_required`, `--defer-auth`, device-code login via `agent auth start/poll/submit`), BYO-provider agents (`--provider`), multi-account auth (`5dive account`), declarative fleets and company templates (`5dive up/down/ps/export`, `team import`), hosting a CrewAI crew (`5dive crew`), controlling agents on OTHER registered boxes (`5dive fleet`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`) and projects (`5dive project add`), building or editing multi-agent loops — a relay with optional human gates (`task loop start`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `5dive loop` LOOP-7 verbs) — decomposing an outcome into a guardrailed task DAG (`5dive goal add`) or a self-steering objective bound to a live metric (`5dive objective`), compiling durable knowledge into the shared wiki (`5dive memory add`), org-chart writes (`5dive org set`), convening a governance vote (`5dive council`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), a machine-readable health check (`5dive doctor --json`, `5dive selfcheck --json`), a task's causal history (`5dive trace`), the current model id per alias (`5dive models`), Telegram/Discord pairing and shared team-bot setup, a delegated GitHub push-for-review (`5dive push`), or the onboarding wizard (`5dive company`).
+description: Extended `5dive` CLI recipes beyond the everyday core — see the `5dive-cli` skill first for spawning/messaging sibling agents and the basic task queue. Use THIS skill for hiring a ready-made persona off the agent market (`5dive market`, `hire --from-market`) or firing one (`5dive fire`), auth recovery (`error.class=auth_required`, `--defer-auth`, device-code login via `agent auth start/poll/submit`), BYO-provider agents (`--provider`), multi-account auth (`5dive account`), declarative fleets and company templates (`5dive up/down/ps/export`, `team import`), hosting a CrewAI crew (`5dive crew`), controlling agents on OTHER registered boxes (`5dive fleet`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`) and projects (`5dive project add`), building or editing multi-agent loops — a relay with optional human gates (`task loop start`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `5dive loop` LOOP-7 verbs) — decomposing an outcome into a guardrailed task DAG (`5dive goal add`) or a self-steering objective bound to a live metric (`5dive objective`), compiling durable knowledge into the shared wiki (`5dive memory add`), org-chart writes (`5dive org set`), convening a governance vote (`5dive council`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), a machine-readable health check (`5dive doctor --json`, `5dive selfcheck --json`), a task's causal history (`5dive trace`), the current model id per alias (`5dive models`), Telegram/Discord pairing and shared team-bot setup, a delegated GitHub push-for-review (`5dive push`), the onboarding wizard (`5dive company`), installing and rolling back plugins (`5dive plugin`, `5dive market --kind=plugin`), proving a seat is alive against work it actually WROTE (`5dive liveness`), the people who can clear a gate (`5dive human`), one agent's single attempt at one task (`5dive run`), turning signed external events into tasks (`5dive trigger`), hardened host remediation (`5dive host`), the nostr handset rail (`5dive buzz`, `agent buzz enable`), and two-stage memory recall on a large store (`memory search --index` + `memory get`).
 ---
 
 # 5dive-cli-extras
@@ -529,6 +529,45 @@ does NOT bypass it). More read-path flags: `--limit=N --max-tokens=T
 --roots=a,b --store=all|mine|wiki --agent=<name>` (another agent's store,
 root-only).
 
+### `--check`: a checkable fact says how to re-check itself (DIVE-3885)
+
+```bash
+... | 5dive memory add --name=<slug> --check='5dive task show DIVE-4029 | grep -q done'
+... | 5dive memory add --name=<slug> --no-check="a judgement, not a measurable state"
+```
+
+`add` will not let a checkable fact skip one — supply `--check` or say why
+not. `5dive memory check` re-runs them and demotes what has gone stale. Its
+exit code 2 cannot distinguish a broken checker from a false fact; the
+discriminator is whether the string parses (`bash -n`).
+
+### Two-stage recall on a large store (DIVE-3821)
+
+```bash
+5dive memory search "<topic>" --index      # stage 1: slug + one-liner + score, no bodies
+5dive memory get <slug> [<slug>...]        # stage 2: full bodies, only what you chose
+5dive memory router --write                # rebuild MEMORY.md as a router, not a flat list
+```
+
+A flat index grows with the store and, past the ~24 KB load limit, the loader
+drops its TAIL with **no error** — the oldest facts stop existing silently.
+`memory router` replaces the enumeration with a recall protocol + a typed topic
+map + the newest N slugs; nothing is deleted, and a
+`<!-- router:keep-start/end -->` block is carried over verbatim.
+
+An empty stage-1 result is evidence of absence; a short router is not. Search
+with the words the FACT would use, not the words your task uses.
+
+### Who compiles what
+
+An async pass (`5dive memory consolidate`, DIVE-3628, run for you by the
+heartbeat) distils FINISHED transcripts into memory atoms, so you do not have
+to hand-copy facts out of a session to keep them. It cannot produce
+JUDGEMENT-shaped knowledge — a wiki page, a decision record, a gap analysis,
+the CAUSE behind a finding — because that is a claim you are making, not a fact
+lying in the transcript. Compile those yourself, to the shared wiki, before you
+close the row. **The pipeline never publishes to the wiki; only you can.**
+
 ## Read the fleet: digest, usage, supervisor
 
 Read-only surfaces, no agent reasoning, no tokens burned. **`usage`/`cost`/
@@ -553,6 +592,138 @@ sudo 5dive supervisor --watch      # live repaint (default 5s)
 
 Check `usage`/`account usage` **before** blaming quota for a failure; check
 `supervisor` before restarting an agent on a hunch.
+
+## Plugins: `5dive plugin`
+
+Plugins are the box's optional capabilities (voice, telegram, dashboard,
+buzz). Browse before installing, and prefer `disable` to `remove` when you
+only want the behaviour off:
+
+```bash
+5dive market --kind=plugin                   # browse what's available
+5dive plugin list --json                     # installed, with version and tier
+sudo 5dive plugin add <plugin>[@<marketplace>] [--yes]
+sudo 5dive plugin enable|disable <plugin>    # a flag flip; the code stays on disk
+sudo 5dive plugin rollback <plugin> [<version>]
+sudo 5dive plugin marketplace add <source> [--as=<name>]
+5dive plugin marketplace list --json
+```
+
+## Is a seat actually alive? `5dive liveness` (DIVE-3778)
+
+A process-presence check calls a wedged seat green. `liveness` grades a seat
+against a **timestamped artifact it WROTE** inside a window:
+
+```bash
+5dive liveness --json                  # every registered seat + the box's own claude seat
+5dive liveness --agent=<name>          # one seat (does not need the registry)
+5dive liveness --window=120            # freshness window in minutes (default 60)
+```
+
+Three verdicts, and the third never collapses into the other two:
+
+- `alive` — an artifact this seat wrote, inside the window. It is named in the output.
+- `no-effect` — every probe RAN and found nothing this seat wrote in the window.
+- `not-reached` — at least one probe could not run and nothing positive was
+  found. **UNKNOWN, not healthy.** This is exactly the state a process check
+  silently reports as fine.
+
+Exit: `0` all alive · `4` some no-effect · `3` some not-reached · `2` usage.
+Reach for `liveness` before `supervisor` when the question is "did this seat
+do anything", and before restarting a seat on a hunch.
+
+## Who can clear a gate: `5dive human` (DIVE-3342)
+
+Gate routing resolves a person, not just a chat id. That mapping is its own
+table:
+
+```bash
+5dive human ls                        # everyone on record
+5dive human show <id>                 # their ids + the agents they own
+5dive human owner <agent>             # resolved owner of that agent
+5dive human recipient <ident>         # who a gate on THAT row would page
+sudo 5dive human add <id> --name="..." --telegram=<chat id> [--buzz=<npub>] [--discord=<id>]
+sudo 5dive human link <id> --agent=<name>      # they own that agent's gates
+sudo 5dive human unlink <id> --agent=<name>
+```
+
+Reads need no sudo; **every write is root-only** — this table is trusted input
+to gate routing. When a gate "pinged nobody", `human recipient <ident>` is the
+first thing to run, not the last.
+
+## Runs: one attempt by one agent at one task
+
+`5dive trace` is the causal story ACROSS attempts. A **run** is the unit
+beneath it — one agent's single attempt to advance one row:
+
+```bash
+5dive run ls --task=DIVE-4029 --json
+5dive run ls --agent=<name> --role=maker|verifier --status=running|completed|failed|abandoned|parked
+5dive run ls --since=7d --limit=50 --json
+5dive run show <RUN-ID> --json
+5dive run events <RUN-ID> --json
+5dive run logs <RUN-ID> [--follow] [--lines=N]
+5dive run retry <RUN-ID> --json
+5dive run metrics --since=7d --agent=<name> --json
+```
+
+Use it when a row looks stalled but the seat looks busy: `run ls` says whether
+an attempt is running, was abandoned, or never started.
+
+## Triggers: signed external events become ordinary tasks
+
+```bash
+sudo 5dive trigger add github --name=<slug> --event=issues.labeled \
+  --repo=owner/repo --assignee=<agent> --where='label.name == "5dive"' \
+  --secret-from-stdin [--task-title=<title>] [--max-pending=50]
+
+sudo 5dive trigger add webhook --name=<slug> --event=<event.type> \
+  --role=<role> --secret-from-stdin [--where='actor == "service"']
+
+5dive trigger ls
+5dive trigger show <name>
+5dive trigger deliveries <name> [--limit=50]
+sudo 5dive trigger rotate <name> --secret-from-stdin
+sudo 5dive trigger enable|disable <name>
+```
+
+The shared secret is read from **stdin** on both `add` and `rotate` — it never
+enters argv. `--where` is the filter that decides which deliveries become rows;
+`--max-pending` is the backstop against a loud repo filling the queue.
+
+## The nostr handset rail: `5dive buzz`
+
+Pairing is **per SERVER** — one QR pairs the phone as the OWNER of this box,
+and that identity is wired into every buzz agent's channels:
+
+```bash
+sudo 5dive buzz pair [--timeout=<secs>] [--agent=<name>]   # prefer this form
+5dive buzz owner [--envelope]        # the box's handset identity (--envelope carries a PRIVATE key)
+```
+
+Who talks in team chat is a separate, per-agent question:
+
+```bash
+sudo 5dive agent buzz enable <name> --relay=https://…  [--channels=<csv>] [--poll-ms=<n>] [--rotate-key]
+5dive agent buzz status <name>       # plugin/config/binary — NOT the unit's liveness. rc 3 = declared, not usable
+5dive agent buzz whois <pubkey|npub1…> [--role]   # rc 0 name · 4 MEASURED unknown · 5 ambiguous · 3 not a key · 1 registry unreadable
+```
+
+`agent buzz enable` and `status` never dial the relay, so neither is evidence
+of reachability. `--rotate-key` mints a NEW identity and the handset must
+re-pair.
+
+## Hardened host remediation: `5dive host`
+
+```bash
+sudo 5dive host unit ...      # 5dive-* unit remediation
+sudo 5dive host journal ...   # journal reads
+sudo 5dive host cron ...      # cron surface
+```
+
+These exist so an admin agent can fix a sick host **under the CLI-root grant it
+already holds**, instead of needing `NOPASSWD:ALL`. Run `sudo 5dive host --help`
+for the current verb set — it is the narrowest surface here and moves most.
 
 ## Control other boxes: `5dive fleet`
 
@@ -602,4 +773,4 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.17.2** (2026-07-29)._
+_Synced to 5dive CLI **0.27.1** (commit `fabce38d`, 2026-09-08)._
