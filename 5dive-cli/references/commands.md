@@ -323,7 +323,8 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                [--parent=<id|DIVE-N>] [--project=<key>] [--from=<who>]
                [--recurring="<cron>"]        # 5-field cron — creates a recurring TEMPLATE
                [--task-budget=<tokens|$cost>] # per-run spend cap for the on-host loop (DIVE-824)
-               [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>] [--no-verify]
+               [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>]
+               [--no-verify] [--verify]      # skip / DEMAND a grader for this row, over the box default
                [--branch=<name>]              # seed a 'Branch: <name>' delegated-push binding (DIVE-1697)
                [--customer]                   # the row is customer-facing
                [--already-blocked=<what it blocked>]   # the AUDITED escape from the internal-filing cap:
@@ -424,6 +425,34 @@ acceptance criteria and assigns a grader ≠ maker, so a plain `task done` HANDS
 OFF to grade instead of closing. Trivial/low-priority/recurring tasks auto-skip;
 `--no-verify` opts out and `FIVE_VERIFY_DEFAULT=0` is a fleet kill-switch.
 Writer ≠ grader is the whole point — never set `--verifier` to the assignee.
+
+**…but WHETHER a row gets a grader is the BOX's choice (DIVE-4251).** Since the
+grader became an ephemeral spawned session (DIVE-4164), grading costs a session
+per delivery, so the default is a spend decision the box owner makes:
+
+```
+5dive config                                  # show this box's settings
+5dive config verify=always|delivered-only|never   # root; per box, not per agent
+```
+
+- `always` — every standard row is graded. **Our own fleet is `always`,** and a
+  box with no setting reads as `always` (absence is not a downgrade).
+- `delivered-only` — a grader is attached when the row is **bound to a delivery**
+  (`task deliver --pr=…`), i.e. code that ships. Knowledge, ops and coordination
+  rows close without one. This is what `5dive init` stamps on a NEW box.
+- `never` — no row is graded by default.
+
+**The row always wins over the box, in both directions:** `task add --verify`
+demands a grade on a `never` box; `task add --no-verify` skips one on `always`.
+A bare `--verify` also clears the DIVE-969/2681 auto-skips, so it works on the
+low-priority and internal rows most likely to want it. (`--verify=<cmd>`, with an
+`=`, is the unrelated acceptance COMMAND.) `task show` prints the row's effective
+`verify:` line and where it came from; `task add` prints one line naming the
+grader session it just booked and the two ways to skip it.
+
+When a box grants a row no grader, the delivered→verifier handoff **degrades to a
+plain close** and `task grader-tick` never spawns for it — the DIVE-1830 merge
+gate still applies, because a merge gate is not a grader.
 
 **A delivered loop is durable against its own maker (DIVE-2007):** once a
 task is handed to its verifier, `task done` from anyone but that verifier is
