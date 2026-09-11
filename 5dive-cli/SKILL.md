@@ -46,11 +46,15 @@ Everything the CLI does maps onto these resources on the host:
   type inherits the credentials via `EnvironmentFile`.
 - A **channel** (`telegram` / `discord` / `dashboard` / `buzz` / `none`,
   comma-listable) is the inbound message surface. Every agent type except
-  `devin` supports channels (`devin` has no chat bridge — reach it via `agent
-  send`/`agent ask`); `telegram`/`discord` each need their own bot token.
-  `dashboard` (claude or codex only, token-free) is web-dashboard chat and is
-  folded into every claude create by default — `--channels=none` opts out. `buzz` is the nostr
-  handset rail; it is wired by `agent buzz enable`, not by a token (see
+  `devin` supports `telegram` (`devin` has no chat bridge at all — reach it via
+  `agent send`/`agent ask`); the other channels are each narrower than that.
+  `telegram`/`discord` each need their own bot token. `discord` works on
+  `claude`, `openclaw` and `hermes` only — it is refused at create-time for
+  `codex`/`grok`/`antigravity`/`opencode`/`devin`, and `pi` accepts it at
+  validation but dies at install (`telegram only`). `dashboard` (claude or codex
+  only, token-free) is web-dashboard chat and is folded into every claude create
+  by default — `--channels=none` opts out. `buzz` is the nostr handset rail and
+  is **claude-only**; it is wired by `agent buzz enable`, not by a token (see
   `5dive-cli-extras`).
 - The CLI is idempotent and safe to call from another agent, but **`sudo` is
   gated by isolation tier** (DIVE-1002). New agents default to `standard` —

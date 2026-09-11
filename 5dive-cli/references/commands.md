@@ -1481,8 +1481,12 @@ alias and the underlying id drift apart across releases.
 Every type except `devin` supports `--channels=telegram` — `devin` has no chat
 bridge at all (`TYPE_CHANNELS[devin]=0`), so reach it with `agent send`/`agent
 ask` and the queue. `discord` is refused for `codex`, `grok`, `antigravity`,
-`opencode` and `devin`; the CLI permits it for `claude`, `openclaw`, `hermes`
-and `pi`. `dashboard` requires `claude` or `codex` (token-free web chat, folded
+`opencode` and `devin` at create-time validation, and `pi` refuses it later at
+install (`pi channel plugin unsupported: discord (telegram only)` — validation
+passes, then the create dies after the agent user already exists); it works on
+`claude`, `openclaw` and `hermes`. `buzz` is **claude-only** (`channels=buzz is
+claude-only`), so read the "every type except `devin`" sentence above as being
+about `telegram`, not about every channel. `dashboard` requires `claude` or `codex` (token-free web chat, folded
 into every claude create by default) — codex gained it in #770, which shipped in
 v0.25.11 on 2026-09-05 and was undocumented here until this sync, so this is a
 correction, not a 0.32.0 change. Run `5dive agent types --json` on the host for the authoritative
