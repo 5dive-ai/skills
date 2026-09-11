@@ -45,10 +45,11 @@ Everything the CLI does maps onto these resources on the host:
 - Auth is decoupled. You authenticate a *type* once; every agent of that
   type inherits the credentials via `EnvironmentFile`.
 - A **channel** (`telegram` / `discord` / `dashboard` / `buzz` / `none`,
-  comma-listable) is the inbound message surface. All agent types support
-  channels; `telegram`/`discord` each need their own bot token. `dashboard`
-  (claude-only, token-free) is web-dashboard chat and is folded into every
-  claude create by default — `--channels=none` opts out. `buzz` is the nostr
+  comma-listable) is the inbound message surface. Every agent type except
+  `devin` supports channels (`devin` has no chat bridge — reach it via `agent
+  send`/`agent ask`); `telegram`/`discord` each need their own bot token.
+  `dashboard` (claude or codex only, token-free) is web-dashboard chat and is
+  folded into every claude create by default — `--channels=none` opts out. `buzz` is the nostr
   handset rail; it is wired by `agent buzz enable`, not by a token (see
   `5dive-cli-extras`).
 - The CLI is idempotent and safe to call from another agent, but **`sudo` is
@@ -60,7 +61,8 @@ Everything the CLI does maps onto these resources on the host:
   the root surfaces (`agent create`/`config`/`pair`, `heartbeat on/off`,
   `doctor`, `usage`) need an admin agent.
 - Agent types on a current host: `antigravity claude codex devin grok hermes
-  openclaw opencode pi` (`devin` and `pi` since 0.32.0). Run `sudo 5dive agent
+  openclaw opencode pi` — `devin` and `pi` have been live since Jul 2026 and
+  were simply missing from these docs until this sync. Run `sudo 5dive agent
   types --json` for what's actually installed — the set changes between
   releases, and `installed=missing` in that output means the type is KNOWN but
   its binary is not on this box, which is not the same as unsupported.

@@ -188,7 +188,7 @@ the hood — `agent inspect <slug>` first for the full disclosure.
 
 ```
 5dive agent config <name> set channels=<none|telegram|discord|dashboard[,ch...]>
-                                                      # dashboard = claude-only, token-free web chat
+                                                      # dashboard = claude or codex, token-free web chat
 5dive agent config <name> set workdir=<path>          # "default" clears
 5dive agent config <name> set auth-profile=<name>     # "default" clears
 5dive agent config <name> set model=<id>              # runtime model (claude/codex/grok/antigravity);
@@ -1471,16 +1471,21 @@ alias and the underlying id drift apart across releases.
 | antigravity | yes      | Google Antigravity CLI (binary: `agy`) |
 | claude      | yes      | Anthropic Claude Code |
 | codex       | yes      | OpenAI Codex CLI |
-| devin       | no       | Cognition Devin (since 0.32.0; no chat channels) |
+| devin       | no       | Cognition Devin (live since Jul 2026; undocumented until this sync; no chat channels) |
 | grok        | yes      | xAI Grok CLI |
 | hermes      | yes      | Nous Research hermes harness (BYO provider key) |
 | openclaw    | yes      | Third-party Claude harness (BYO provider key) |
 | opencode    | yes      | opencode.ai (free models, no signup) |
-| pi          | yes      | Inflection Pi harness (since 0.32.0) |
+| pi          | yes      | Inflection Pi harness (live since Jul 2026; undocumented until this sync) |
 
-All current types support `--channels=telegram`; `discord` is claude/openclaw;
-`dashboard` is claude-only (token-free web chat, folded into every claude create
-by default). Run `5dive agent types --json` on the host for the authoritative
+Every type except `devin` supports `--channels=telegram` — `devin` has no chat
+bridge at all (`TYPE_CHANNELS[devin]=0`), so reach it with `agent send`/`agent
+ask` and the queue. `discord` is refused for `codex`, `grok`, `antigravity`,
+`opencode` and `devin`; the CLI permits it for `claude`, `openclaw`, `hermes`
+and `pi`. `dashboard` requires `claude` or `codex` (token-free web chat, folded
+into every claude create by default) — codex gained it in #770, which shipped in
+v0.25.11 on 2026-09-05 and was undocumented here until this sync, so this is a
+correction, not a 0.32.0 change. Run `5dive agent types --json` on the host for the authoritative
 list — installers add or drop entries over time (`gemini` was removed). A row
 reading `installed=missing` is a type this CLI KNOWS whose binary is absent on
 that box; it is not an unsupported type.
