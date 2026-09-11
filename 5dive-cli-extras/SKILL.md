@@ -331,6 +331,9 @@ A recurring **template** materializes into a normal todo on schedule; the
 
 sudo 5dive heartbeat on worker-1 --every=30m   # default every=30m; fresh sends /clear per task
 sudo 5dive heartbeat ls              # enrolled agents + next wake + queued count
+# since 0.32.0: wake ONE seat for ONE row NOW, reusing the tick's own delivery
+# path — how an incident row gets a grader without waiting its turn in the queue.
+sudo 5dive heartbeat wake-task [--fresh|--no-fresh] <agent> <task_id> [<ident>]
 sudo 5dive heartbeat off worker-1
 ```
 
@@ -773,4 +776,4 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.27.1** (commit `fabce38d`, 2026-09-08)._
+_Synced to 5dive CLI **0.32.0** (tag `bb35e2be`, 2026-09-11)._

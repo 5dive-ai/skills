@@ -2,7 +2,8 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.27.1** (commit `fabce38d`, 2026-09-08).
+Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
+**since 0.32.0** changed shape after the 0.27.1 sync.
 
 ## Top-level
 
@@ -16,6 +17,9 @@ Synced to CLI **0.27.1** (commit `fabce38d`, 2026-09-08).
 5dive hire       <role> [--from-market]   # sugar: create a teammate (+ org slot)
 5dive fire       <name>              # sugar: remove a teammate (alias of agent rm)
 5dive company    [--yes] [flags]     # onboarding wizard: project + objective + goal in one shot
+5dive config     [verify=always|delivered-only|never]   # since 0.32.0 (DIVE-4251): PER-BOX settings.
+                                     #   Read is unprivileged, the write needs root. NOT the same verb as
+                                     #   `agent config <name> set ...`, which is per-seat
 5dive task       ...                 # host-shared task queue (no sudo)
 5dive project    add|ls|show         # ident namespaces for the queue (no sudo)
 5dive goal       add "<outcome>"     # outcome -> validated, guardrailed task DAG
@@ -97,6 +101,11 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                                                   # (sudoers for _push_do); refused on --isolation=
                                                                   # sandboxed, no-op+warn on --isolation=admin (already
                                                                   # covered by its broad sudo)
+5dive agent grant <name> <merge|push|deploy>  # since 0.32.0 (DIVE-4183), root: re-render an existing
+                                             # STANDARD seat's managed sudoers from the current template so
+                                             # it gains a capability added AFTER it was created. Idempotent;
+                                             # refuses any policy this CLI did not write. Reach for it when
+                                             # ONE seat is missing ONE capability the template already emits
 5dive agent clone <src> <dst> [--channels=...] [--telegram-token=...]
                               [--discord-token=...] [--workdir=...]
 5dive agent inspect <slug|pack.tar.gz>        # read-only install-time disclosure (no root):
@@ -378,6 +387,11 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task start  <id|DIVE-N>                # -> in_progress
 5dive task done   <id|DIVE-N> [--result=<text>] [--force-merge-gate] [--keep-worktree]
                                              # -> done (or HANDS OFF to grader if verified); result = owner ping
+                  [--no-graded-sha]          # A VERIFIER closing a graded row must put `graded-sha: <sha>` in
+                                             # its --result, naming the commit it actually read. Without it the
+                                             # merge gate holds at `no-graded-sha-stated`, and a sha that is not
+                                             # the PR head holds at `graded-sha-is-not-the-head` (DIVE-2656).
+                                             # --no-graded-sha is the audited escape, not the normal path
 5dive task deliver <id|DIVE-N> --pr=<url> [--result=<text>]
                                              # DIVE-1830: maker records the delivery PR + hands off to the
                                              # verifier; 'task done' now stays BLOCKED until that PR is
@@ -385,7 +399,11 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task cancel <id|DIVE-N> [--result=<text>] [--keep-worktree]   # -> cancelled; --result captures why
 5dive task verify <id|DIVE-N> [--cmd="<cmd>"] [--no-done] [--timeout=<s>]
                                              # run a check; exit 0 => proven-done (flips to done)
-5dive task reject <id|DIVE-N> [--feedback="<what to fix>"]   # verifier FAIL: bounce to maker; escalate at max-iters
+5dive task reject <id|DIVE-N> --feedback="FINDING/FIX/VERIFY"   # verifier FAIL: bounce to maker; escalate at
+                                             # max-iters. **since 0.32.0 (DIVE-4144): --feedback is REQUIRED and
+                                             # must name a FIX**, not just a finding — a reject that only says
+                                             # what is wrong is refused. `--no-fix="<why>"` is the audited escape
+                                             # for a finding you genuinely cannot turn into an instruction
 5dive task merge <id|DIVE-N>                 # DIVE-3474: merge the PR on a row THIS seat graded PASS
 5dive task merge-unverified [--limit=N] [--since=Nd]   # DIVE-3526: re-derive the closes the merge gate
                                              # could NOT check at the time
@@ -396,6 +414,13 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              # gate survives ONLY here
 5dive task merge-audit [--limit=N] [--json]  # DIVE-1935: retrospective, READ-ONLY sweep of DONE tasks
                                              # for a named PR that never merged (or merged red); never reopens
+5dive task grader-replay [--json]            # since 0.32.0 (DIVE-4164): DRY-RUN capacity replay of the
+                                             # grader pool — what the lane WOULD have spawned, changing nothing
+5dive task grader-tick                       # since 0.32.0 (DIVE-4164): the grader-pool lane itself. Driven by
+                                             # the heartbeat, not by hand; a row the box grants no grader never
+                                             # spawns one here
+5dive task gate-undo-window [...]            # since 0.32.0 (DIVE-4154): hold a gate's phone ping for a short
+                                             # undo window before it leaves the box
 5dive task reclaim <id|DIVE-N>|--all [--dry-run]
                                              # DIVE-1967: reclaim node_modules from closed tasks' worktrees
                                              # (gitignored, npm-ci-regenerable — data-loss-free). --all skips
@@ -526,6 +551,12 @@ length) and refuses on a closed (done/cancelled) task; bounce it back with
                                              #   requires. HUMAN-ONLY by declaration: outranks the tier and
                                              #   every routing kind. If you cannot NAME the capability, it is
                                              #   a decision you find uncomfortable, not a tier-2 gate
+                [--ask-ok="<why>"]           # since 0.32.0 (DIVE-4176): a gate that REACHES THE PAIRED HUMAN
+                                             #   is now REFUSED when its --ask runs over 25 words, or names an
+                                             #   ident, sha, branch, path, flag or check name. That text is all
+                                             #   he sees. Rewrite the ask as a choice between OUTCOMES and put
+                                             #   the mechanism in the body; --ask-ok files anyway, states why,
+                                             #   and is recorded on the gate and counted afterwards
                 [--urgent]                   # DIVE-3474: a routed gate normally QUEUES for the reviewer's
                                              #   next natural wake. --urgent pings at file time. It is NOT
                                              #   --recommend: "the answer is X" and "this cannot wait" are
@@ -954,6 +985,12 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 5dive heartbeat off <name>                                # stop waking (keeps settings)
 5dive heartbeat ls                                        # enrolled + next-wake + queued count
 5dive heartbeat tick                                      # root cron driver — wired at provision; don't call
+5dive heartbeat wake-task [--fresh|--no-fresh] <agent> <task_id> [<ident>]
+                                                           # root: wake ONE seat for ONE row now, reusing the
+                                                           # tick's own delivery path. This is how an incident row
+                                                           # gets a grader without waiting its turn in the queue
+                                                           # (the hotfix path); --fresh/--no-fresh overrides the
+                                                           # seat's own freshness for that turn only
 5dive heartbeat wake-mode <name> [always_on|cold] [--cap=<n>] [--sleep-after=<min>]
                                                            # no mode/flags => print current mode/budget/sleep/cost.
                                                            # 'cold' opts an agent into reactive wake-on-alert with
@@ -1427,12 +1464,16 @@ alias and the underlying id drift apart across releases.
 | antigravity | yes      | Google Antigravity CLI (binary: `agy`) |
 | claude      | yes      | Anthropic Claude Code |
 | codex       | yes      | OpenAI Codex CLI |
+| devin       | no       | Cognition Devin (since 0.32.0; no chat channels) |
 | grok        | yes      | xAI Grok CLI |
 | hermes      | yes      | Nous Research hermes harness (BYO provider key) |
 | openclaw    | yes      | Third-party Claude harness (BYO provider key) |
 | opencode    | yes      | opencode.ai (free models, no signup) |
+| pi          | yes      | Inflection Pi harness (since 0.32.0) |
 
 All current types support `--channels=telegram`; `discord` is claude/openclaw;
 `dashboard` is claude-only (token-free web chat, folded into every claude create
 by default). Run `5dive agent types --json` on the host for the authoritative
-list — installers add or drop entries over time (`gemini` was removed).
+list — installers add or drop entries over time (`gemini` was removed). A row
+reading `installed=missing` is a type this CLI KNOWS whose binary is absent on
+that box; it is not an unsupported type.
