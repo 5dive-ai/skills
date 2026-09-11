@@ -45,11 +45,16 @@ Everything the CLI does maps onto these resources on the host:
 - Auth is decoupled. You authenticate a *type* once; every agent of that
   type inherits the credentials via `EnvironmentFile`.
 - A **channel** (`telegram` / `discord` / `dashboard` / `buzz` / `none`,
-  comma-listable) is the inbound message surface. All agent types support
-  channels; `telegram`/`discord` each need their own bot token. `dashboard`
-  (claude-only, token-free) is web-dashboard chat and is folded into every
-  claude create by default — `--channels=none` opts out. `buzz` is the nostr
-  handset rail; it is wired by `agent buzz enable`, not by a token (see
+  comma-listable) is the inbound message surface. Every agent type except
+  `devin` supports `telegram` (`devin` has no chat bridge at all — reach it via
+  `agent send`/`agent ask`); the other channels are each narrower than that.
+  `telegram`/`discord` each need their own bot token. `discord` works on
+  `claude`, `openclaw` and `hermes` only — it is refused at create-time for
+  `codex`/`grok`/`antigravity`/`opencode`/`devin`, and `pi` accepts it at
+  validation but dies at install (`telegram only`). `dashboard` (claude or codex
+  only, token-free) is web-dashboard chat and is folded into every claude create
+  by default — `--channels=none` opts out. `buzz` is the nostr handset rail and
+  is **claude-only**; it is wired by `agent buzz enable`, not by a token (see
   `5dive-cli-extras`).
 - The CLI is idempotent and safe to call from another agent, but **`sudo` is
   gated by isolation tier** (DIVE-1002). New agents default to `standard` —
@@ -59,9 +64,12 @@ Everything the CLI does maps onto these resources on the host:
   no-sudo surfaces (`5dive task`, `org` reads, `memory`) run from any agent;
   the root surfaces (`agent create`/`config`/`pair`, `heartbeat on/off`,
   `doctor`, `usage`) need an admin agent.
-- Agent types on a current host: `antigravity codex claude openclaw hermes
-  grok opencode`. Run `sudo 5dive agent types --json` for what's actually
-  installed — the set changes between releases.
+- Agent types on a current host: `antigravity claude codex devin grok hermes
+  openclaw opencode pi` — `devin` and `pi` have been live since Jul 2026 and
+  were simply missing from these docs until this sync. Run `sudo 5dive agent
+  types --json` for what's actually installed — the set changes between
+  releases, and `installed=missing` in that output means the type is KNOWN but
+  its binary is not on this box, which is not the same as unsupported.
 
 ## Output contract — always pass `--json`
 
@@ -192,7 +200,18 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 # On a row that carries a verifier, the maker DELIVERS instead of closing;
 # the verifier passes (`verify`) or bounces it back (`reject`).
 5dive task deliver DIVE-7 --pr=<url> --result="..." --json
-5dive task reject  DIVE-7 --feedback="what to fix" --json
+# since 0.32.0 (DIVE-4144): --feedback is REQUIRED on a reject and must name a
+# FIX, not only a finding. --no-fix="<why>" is the audited escape.
+5dive task reject  DIVE-7 --feedback="FINDING: x / FIX: do y / VERIFY: run z" --json
+
+# Whether a row is graded at all is the BOX's setting, and the row overrides it
+# in both directions (since 0.32.0, DIVE-4251):
+5dive config                                      # this box's settings
+5dive config verify=always|delivered-only|never   # root; per BOX, not per seat
+5dive task add "..." --verify      # demand a grade on a `never` box (also clears
+                                   # the auto-skips; `--verify=<cmd>` with an `=`
+                                   # is the unrelated acceptance COMMAND)
+5dive task add "..." --no-verify   # skip one on an `always` box
 
 # Every `ls` carries a `gate` column: HUMAN:<type> a person owes an answer,
 # <seat>:<type> an agent does, `answered:<retire>`, `-` nothing.
@@ -206,6 +225,12 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 # Who reports to whom, at a glance:
 5dive org tree --json
 ```
+
+**A verifier closing a graded row must put `graded-sha: <sha>` in its
+`--result`**, naming the commit it actually read. Without it the merge gate
+holds at `no-graded-sha-stated`; a sha that is not the PR head holds at
+`graded-sha-is-not-the-head` (DIVE-2656). `--no-graded-sha` is the audited
+escape, not the normal path.
 
 On `done`/`cancel`, `--result`'s **first line** is what gets pinged to the
 owner's phone — lead with a terse one-line summary, detail after the first
@@ -230,9 +255,16 @@ it and don't guess — gate it:
 5dive task answer DIVE-12 --value="flag" --json   # records + unblocks + pings the owner
 ```
 
-Keep `--ask` to ONE crisp question with ~1 line of context; heavy detail
-belongs in the task body. Always pass `--recommend` for decision/approval —
-the alert leads with your recommendation so the human can one-tap it.
+**Since 0.32.0 the `--ask` is ENFORCED, not advised (DIVE-4176).** A gate that
+reaches the paired human is *refused* when its `--ask` runs over **25 words**, or
+names an ident, sha, branch, path, flag or check name — that text is all he sees,
+and he has never read our code. Write it as a choice between OUTCOMES ("a cleanup
+job needs read access it doesn't have: grant it permanently, or have me run the
+one-off check myself?"), and put every mechanism in the task BODY.
+`--ask-ok="<why>"` files anyway; it is recorded on the gate and counted later, so
+reach for it when the ask genuinely cannot be written in plain English, not to get
+past the check. Always pass `--recommend` for decision/approval — the alert leads
+with your recommendation so the human can one-tap it.
 
 **Risk tiers (`--tier=0|1|2`):** `0` auto-clears immediately (needs
 `--recommend`, no ping); `1` pings but auto-applies the recommendation if
@@ -354,6 +386,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.27.1** (commit `fabce38d`, 2026-09-08). A given box's
+_Synced to 5dive CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

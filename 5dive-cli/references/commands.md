@@ -2,7 +2,8 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.27.1** (commit `fabce38d`, 2026-09-08).
+Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
+**since 0.32.0** changed shape after the 0.27.1 sync.
 
 ## Top-level
 
@@ -16,6 +17,9 @@ Synced to CLI **0.27.1** (commit `fabce38d`, 2026-09-08).
 5dive hire       <role> [--from-market]   # sugar: create a teammate (+ org slot)
 5dive fire       <name>              # sugar: remove a teammate (alias of agent rm)
 5dive company    [--yes] [flags]     # onboarding wizard: project + objective + goal in one shot
+5dive config     [verify=always|delivered-only|never]   # since 0.32.0 (DIVE-4251): PER-BOX settings.
+                                     #   Read is unprivileged, the write needs root. NOT the same verb as
+                                     #   `agent config <name> set ...`, which is per-seat
 5dive task       ...                 # host-shared task queue (no sudo)
 5dive project    add|ls|show         # ident namespaces for the queue (no sudo)
 5dive goal       add "<outcome>"     # outcome -> validated, guardrailed task DAG
@@ -97,6 +101,11 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                                                   # (sudoers for _push_do); refused on --isolation=
                                                                   # sandboxed, no-op+warn on --isolation=admin (already
                                                                   # covered by its broad sudo)
+5dive agent grant <name> <merge|push|deploy>  # since 0.32.0 (DIVE-4183), root: re-render an existing
+                                             # STANDARD seat's managed sudoers from the current template so
+                                             # it gains a capability added AFTER it was created. Idempotent;
+                                             # refuses any policy this CLI did not write. Reach for it when
+                                             # ONE seat is missing ONE capability the template already emits
 5dive agent clone <src> <dst> [--channels=...] [--telegram-token=...]
                               [--discord-token=...] [--workdir=...]
 5dive agent inspect <slug|pack.tar.gz>        # read-only install-time disclosure (no root):
@@ -179,7 +188,7 @@ the hood — `agent inspect <slug>` first for the full disclosure.
 
 ```
 5dive agent config <name> set channels=<none|telegram|discord|dashboard[,ch...]>
-                                                      # dashboard = claude-only, token-free web chat
+                                                      # dashboard = claude or codex, token-free web chat
 5dive agent config <name> set workdir=<path>          # "default" clears
 5dive agent config <name> set auth-profile=<name>     # "default" clears
 5dive agent config <name> set model=<id>              # runtime model (claude/codex/grok/antigravity);
@@ -323,7 +332,8 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                [--parent=<id|DIVE-N>] [--project=<key>] [--from=<who>]
                [--recurring="<cron>"]        # 5-field cron — creates a recurring TEMPLATE
                [--task-budget=<tokens|$cost>] # per-run spend cap for the on-host loop (DIVE-824)
-               [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>] [--no-verify]
+               [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>]
+               [--no-verify] [--verify]      # skip / DEMAND a grader for this row, over the box default
                [--branch=<name>]              # seed a 'Branch: <name>' delegated-push binding (DIVE-1697)
                [--customer]                   # the row is customer-facing
                [--already-blocked=<what it blocked>]   # the AUDITED escape from the internal-filing cap:
@@ -377,14 +387,30 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task start  <id|DIVE-N>                # -> in_progress
 5dive task done   <id|DIVE-N> [--result=<text>] [--force-merge-gate] [--keep-worktree]
                                              # -> done (or HANDS OFF to grader if verified); result = owner ping
+                  [--no-graded-sha]          # A VERIFIER closing a graded row must put `graded-sha: <sha>` in
+                                             # its --result, naming the commit it actually read. Without it the
+                                             # merge gate holds at `no-graded-sha-stated`, and a sha that is not
+                                             # the PR head holds at `graded-sha-is-not-the-head` (DIVE-2656).
+                                             # --no-graded-sha is the audited escape, not the normal path
 5dive task deliver <id|DIVE-N> --pr=<url> [--result=<text>]
                                              # DIVE-1830: maker records the delivery PR + hands off to the
                                              # verifier; 'task done' now stays BLOCKED until that PR is
                                              # MERGED and green (see merge-gate note below)
+                  [--force-redeliver="<why>"] # since 0.32.0 (DIVE-4144): a re-delivery whose --result text is
+                                             # BYTE-IDENTICAL to the one the verifier just rejected is REFUSED
+                                             # and writes nothing (the row stays yours, the iteration counter
+                                             # does not move) — a bare re-deliver reads as a fresh pass and
+                                             # costs the verifier a cold reload of the PR to find nothing
+                                             # changed. Say what you changed; the flag is for the genuine case
+                                             # (the verifier misread it, a lost handoff is being restored)
 5dive task cancel <id|DIVE-N> [--result=<text>] [--keep-worktree]   # -> cancelled; --result captures why
 5dive task verify <id|DIVE-N> [--cmd="<cmd>"] [--no-done] [--timeout=<s>]
                                              # run a check; exit 0 => proven-done (flips to done)
-5dive task reject <id|DIVE-N> [--feedback="<what to fix>"]   # verifier FAIL: bounce to maker; escalate at max-iters
+5dive task reject <id|DIVE-N> --feedback="FINDING/FIX/VERIFY"   # verifier FAIL: bounce to maker; escalate at
+                                             # max-iters. **since 0.32.0 (DIVE-4144): --feedback is REQUIRED and
+                                             # must name a FIX**, not just a finding — a reject that only says
+                                             # what is wrong is refused. `--no-fix="<why>"` is the audited escape
+                                             # for a finding you genuinely cannot turn into an instruction
 5dive task merge <id|DIVE-N>                 # DIVE-3474: merge the PR on a row THIS seat graded PASS
 5dive task merge-unverified [--limit=N] [--since=Nd]   # DIVE-3526: re-derive the closes the merge gate
                                              # could NOT check at the time
@@ -395,6 +421,13 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              # gate survives ONLY here
 5dive task merge-audit [--limit=N] [--json]  # DIVE-1935: retrospective, READ-ONLY sweep of DONE tasks
                                              # for a named PR that never merged (or merged red); never reopens
+5dive task grader-replay [--json]            # since 0.32.0 (DIVE-4164): DRY-RUN capacity replay of the
+                                             # grader pool — what the lane WOULD have spawned, changing nothing
+5dive task grader-tick                       # since 0.32.0 (DIVE-4164): the grader-pool lane itself. Driven by
+                                             # the heartbeat, not by hand; a row the box grants no grader never
+                                             # spawns one here
+5dive task gate-undo-window [...]            # since 0.32.0 (DIVE-4154): hold a gate's phone ping for a short
+                                             # undo window before it leaves the box
 5dive task reclaim <id|DIVE-N>|--all [--dry-run]
                                              # DIVE-1967: reclaim node_modules from closed tasks' worktrees
                                              # (gitignored, npm-ci-regenerable — data-loss-free). --all skips
@@ -424,6 +457,34 @@ acceptance criteria and assigns a grader ≠ maker, so a plain `task done` HANDS
 OFF to grade instead of closing. Trivial/low-priority/recurring tasks auto-skip;
 `--no-verify` opts out and `FIVE_VERIFY_DEFAULT=0` is a fleet kill-switch.
 Writer ≠ grader is the whole point — never set `--verifier` to the assignee.
+
+**…but WHETHER a row gets a grader is the BOX's choice (DIVE-4251).** Since the
+grader became an ephemeral spawned session (DIVE-4164), grading costs a session
+per delivery, so the default is a spend decision the box owner makes:
+
+```
+5dive config                                  # show this box's settings
+5dive config verify=always|delivered-only|never   # root; per box, not per agent
+```
+
+- `always` — every standard row is graded. **Our own fleet is `always`,** and a
+  box with no setting reads as `always` (absence is not a downgrade).
+- `delivered-only` — a grader is attached when the row is **bound to a delivery**
+  (`task deliver --pr=…`), i.e. code that ships. Knowledge, ops and coordination
+  rows close without one. This is what `5dive init` stamps on a NEW box.
+- `never` — no row is graded by default.
+
+**The row always wins over the box, in both directions:** `task add --verify`
+demands a grade on a `never` box; `task add --no-verify` skips one on `always`.
+A bare `--verify` also clears the DIVE-969/2681 auto-skips, so it works on the
+low-priority and internal rows most likely to want it. (`--verify=<cmd>`, with an
+`=`, is the unrelated acceptance COMMAND.) `task show` prints the row's effective
+`verify:` line and where it came from; `task add` prints one line naming the
+grader session it just booked and the two ways to skip it.
+
+When a box grants a row no grader, the delivered→verifier handoff **degrades to a
+plain close** and `task grader-tick` never spawns for it — the DIVE-1830 merge
+gate still applies, because a merge gate is not a grader.
 
 **A delivered loop is durable against its own maker (DIVE-2007):** once a
 task is handed to its verifier, `task done` from anyone but that verifier is
@@ -497,6 +558,12 @@ length) and refuses on a closed (done/cancelled) task; bounce it back with
                                              #   requires. HUMAN-ONLY by declaration: outranks the tier and
                                              #   every routing kind. If you cannot NAME the capability, it is
                                              #   a decision you find uncomfortable, not a tier-2 gate
+                [--ask-ok="<why>"]           # since 0.32.0 (DIVE-4176): a gate that REACHES THE PAIRED HUMAN
+                                             #   is now REFUSED when its --ask runs over 25 words, or names an
+                                             #   ident, sha, branch, path, flag or check name. That text is all
+                                             #   he sees. Rewrite the ask as a choice between OUTCOMES and put
+                                             #   the mechanism in the body; --ask-ok files anyway, states why,
+                                             #   and is recorded on the gate and counted afterwards
                 [--urgent]                   # DIVE-3474: a routed gate normally QUEUES for the reviewer's
                                              #   next natural wake. --urgent pings at file time. It is NOT
                                              #   --recommend: "the answer is X" and "this cannot wait" are
@@ -925,6 +992,12 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 5dive heartbeat off <name>                                # stop waking (keeps settings)
 5dive heartbeat ls                                        # enrolled + next-wake + queued count
 5dive heartbeat tick                                      # root cron driver — wired at provision; don't call
+5dive heartbeat wake-task [--fresh|--no-fresh] <agent> <task_id> [<ident>]
+                                                           # root: wake ONE seat for ONE row now, reusing the
+                                                           # tick's own delivery path. This is how an incident row
+                                                           # gets a grader without waiting its turn in the queue
+                                                           # (the hotfix path); --fresh/--no-fresh overrides the
+                                                           # seat's own freshness for that turn only
 5dive heartbeat wake-mode <name> [always_on|cold] [--cap=<n>] [--sleep-after=<min>]
                                                            # no mode/flags => print current mode/budget/sleep/cost.
                                                            # 'cold' opts an agent into reactive wake-on-alert with
@@ -1398,12 +1471,25 @@ alias and the underlying id drift apart across releases.
 | antigravity | yes      | Google Antigravity CLI (binary: `agy`) |
 | claude      | yes      | Anthropic Claude Code |
 | codex       | yes      | OpenAI Codex CLI |
+| devin       | no       | Cognition Devin (live since Jul 2026; undocumented until this sync; no chat channels) |
 | grok        | yes      | xAI Grok CLI |
 | hermes      | yes      | Nous Research hermes harness (BYO provider key) |
 | openclaw    | yes      | Third-party Claude harness (BYO provider key) |
 | opencode    | yes      | opencode.ai (free models, no signup) |
+| pi          | yes      | Inflection Pi harness (live since Jul 2026; undocumented until this sync) |
 
-All current types support `--channels=telegram`; `discord` is claude/openclaw;
-`dashboard` is claude-only (token-free web chat, folded into every claude create
-by default). Run `5dive agent types --json` on the host for the authoritative
-list — installers add or drop entries over time (`gemini` was removed).
+Every type except `devin` supports `--channels=telegram` — `devin` has no chat
+bridge at all (`TYPE_CHANNELS[devin]=0`), so reach it with `agent send`/`agent
+ask` and the queue. `discord` is refused for `codex`, `grok`, `antigravity`,
+`opencode` and `devin` at create-time validation, and `pi` refuses it later at
+install (`pi channel plugin unsupported: discord (telegram only)` — validation
+passes, then the create dies after the agent user already exists); it works on
+`claude`, `openclaw` and `hermes`. `buzz` is **claude-only** (`channels=buzz is
+claude-only`), so read the "every type except `devin`" sentence above as being
+about `telegram`, not about every channel. `dashboard` requires `claude` or `codex` (token-free web chat, folded
+into every claude create by default) — codex gained it in #770, which shipped in
+v0.25.11 on 2026-09-05 and was undocumented here until this sync, so this is a
+correction, not a 0.32.0 change. Run `5dive agent types --json` on the host for the authoritative
+list — installers add or drop entries over time (`gemini` was removed). A row
+reading `installed=missing` is a type this CLI KNOWS whose binary is absent on
+that box; it is not an unsupported type.
