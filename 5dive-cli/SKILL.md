@@ -210,9 +210,12 @@ Pass nothing and the row still gets a mode — printed back with its cost on the
 low-priority row, a bodyless chore title, a body tagged `mechanical`/`copy`/
 `doc`, or a body that is one read-back command; `check` when you gave
 `--verify=<cmd>`; a pinned seat when you passed `--customer`; `temp` otherwise.
-The box setting still caps it (`5dive config verify=never` forces `none` on
-everything that would cost a session). See `5dive-cli-extras` for the rail
-itself, projects, recurring work, and loops.
+The box setting still caps it, and it wins: `5dive config verify=never` forces
+`none` on `temp` and on a pinned `<seat>` — both book a session — and says so on
+the created line rather than downgrading you in silence. `check` is exempt (a
+command spends nothing), and bare `--verify` is the one way to buy a single row
+back on such a box. See `5dive-cli-extras` for the rail itself, projects,
+recurring work, and loops.
 
 ### Park a question on a human: `task need`
 
