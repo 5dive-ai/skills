@@ -234,8 +234,37 @@ escape, not the normal path.
 
 On `done`/`cancel`, `--result`'s **first line** is what gets pinged to the
 owner's phone — lead with a terse one-line summary, detail after the first
-newline. A non-trivial `task add` is graded by a verifier other than the
-maker by default (DIVE-969); see `5dive-cli-extras` for that rail, projects,
+newline.
+
+### Choose the reviewer when you file the row: `--review=` (DIVE-4324)
+
+A graded row spends a grader session, so **pick the reviewer at filing time**
+instead of letting the default pick one for you:
+
+| `--review=` | who grades it | cost |
+|---|---|---|
+| `none` | nobody — `task done` closes it outright | no session |
+| `check` | a command does (pass `--verify="<cmd>"` too) | no session |
+| `temp` | one fresh pool session per delivery, then gone | one session |
+| `<seat>` | a pinned standing reviewer, in its own session | one session |
+
+```bash
+5dive task add "bump the pinned version in three manifests" --review=none
+5dive task add "add the retry arm" --review=check --verify="bash tests/retry_unit.sh"
+5dive task add "rework the claim path" --review=temp
+5dive task add "new pricing tile" --review=quinn --customer
+```
+
+Pass nothing and the row still gets a mode — printed back with its cost on the
+`created DIVE-N` line, and shown by `task ls` / `task show`: `none` for a
+low-priority row, a bodyless chore title, a body tagged `mechanical`/`copy`/
+`doc`, or a body that is one read-back command; `check` when you gave
+`--verify=<cmd>`; a pinned seat when you passed `--customer`; `temp` otherwise.
+The box setting still caps it, and it wins: `5dive config verify=never` forces
+`none` on `temp` and on a pinned `<seat>` — both book a session — and says so on
+the created line rather than downgrading you in silence. `check` is exempt (a
+command spends nothing), and bare `--verify` is the one way to buy a single row
+back on such a box. See `5dive-cli-extras` for the rail itself, projects,
 recurring work, and loops.
 
 ### Park a question on a human: `task need`
