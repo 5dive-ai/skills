@@ -396,6 +396,13 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              # DIVE-1830: maker records the delivery PR + hands off to the
                                              # verifier; 'task done' now stays BLOCKED until that PR is
                                              # MERGED and green (see merge-gate note below)
+                  [--force-redeliver="<why>"] # since 0.32.0 (DIVE-4144): a re-delivery whose --result text is
+                                             # BYTE-IDENTICAL to the one the verifier just rejected is REFUSED
+                                             # and writes nothing (the row stays yours, the iteration counter
+                                             # does not move) — a bare re-deliver reads as a fresh pass and
+                                             # costs the verifier a cold reload of the PR to find nothing
+                                             # changed. Say what you changed; the flag is for the genuine case
+                                             # (the verifier misread it, a lost handoff is being restored)
 5dive task cancel <id|DIVE-N> [--result=<text>] [--keep-worktree]   # -> cancelled; --result captures why
 5dive task verify <id|DIVE-N> [--cmd="<cmd>"] [--no-done] [--timeout=<s>]
                                              # run a check; exit 0 => proven-done (flips to done)
