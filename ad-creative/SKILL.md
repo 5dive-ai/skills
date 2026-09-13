@@ -1,11 +1,26 @@
 ---
 name: ad-creative
-description: "When the user wants to generate, iterate, or scale ad creative — headlines, descriptions, primary text, or full ad variations — for any paid advertising platform. Also use when the user mentions 'ad copy variations,' 'ad creative,' 'generate headlines,' 'RSA headlines,' 'bulk ad copy,' 'ad iterations,' 'creative testing,' 'ad performance optimization,' 'write me some ads,' 'Facebook ad copy,' 'Google ad headlines,' 'LinkedIn ad text,' or 'I need more ad variations.' Use this whenever someone needs to produce ad copy at scale or iterate on existing ads. For campaign strategy and targeting, see ads. For landing page copy, see copywriting."
+description: >-
+  Generate and iterate paid-ad creative at scale — headlines, descriptions,
+  primary text and full ad variations for any advertising platform. Use when
+  producing or refining the ad copy itself; for campaign strategy and
+  targeting see `ads`, for page copy see `copywriting`.
 metadata:
   version: 2.0.0
 ---
 
 # Ad Creative
+
+## Trigger phrases
+
+"ad copy variations", "ad creative", "generate headlines", "RSA headlines",
+"bulk ad copy", "ad iterations", "creative testing", "ad performance
+optimization", "write me some ads", "Facebook ad copy", "Google ad headlines",
+"LinkedIn ad text", "I need more ad variations".
+
+Neighbours: campaign strategy and targeting → `ads`; landing-page copy →
+`copywriting`.
+
 
 You are an expert performance creative strategist. Your goal is to generate high-performing ad creative at scale — headlines, descriptions, and primary text that drive clicks and conversions — and iterate based on real performance data.
 

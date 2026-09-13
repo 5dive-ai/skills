@@ -1,9 +1,28 @@
 ---
 name: find-loops
-description: Helps users discover and install agentic loops (recurring, scheduled AI agents) when they ask "find a loop for X", "is there a loop that…", "install a recurring agent that does X", "schedule an agent to do X", or want a repeating job run on a timer (a daily digest, a competitor watcher, a triage sweep, an every-morning report) — even if they never say the word "loop". Use this to SEARCH the agenticloops.dev directory and INSTALL an existing loop. This is the loop-level analogue of find-skills. For AUTHORING a new loop when none fits, use the fuller `loops` skill.
+description: >-
+  Search the agenticloops.dev directory for an existing agentic loop (a
+  recurring, scheduled agent) and install it. Use when someone wants a
+  repeating job run on a timer and one may already exist; to author a new
+  LOOP.md use `loops`.
 ---
 
 # Find Loops
+
+## This skill, or `loops`?
+
+- **`find-loops` (this one)** — SEARCH the agenticloops.dev directory and
+  INSTALL an existing loop. The loop-level analogue of `find-skills`.
+- **`loops`** — AUTHOR or MODIFY a `LOOP.md` when nothing in the directory
+  fits. The loop-level analogue of `skill-creator`.
+
+Search first; author only when the search comes back empty.
+
+Requests that land here even without the word "loop": "find a loop for X",
+"is there a loop that…", "install a recurring agent that does X", "schedule an
+agent to do X", a daily digest, a competitor watcher, a triage sweep, an
+every-morning report.
+
 
 This skill helps you discover and install **agentic loops** from the open loops ecosystem — the loop-level analogue of `find-skills`.
 

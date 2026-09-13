@@ -1,9 +1,47 @@
 ---
 name: 5dive-cli
-description: Use the local `5dive` CLI on a 5dive runtime VM to spawn, inspect, send to, and tear down sibling agents — plus the shared task queue and org chart. Trigger when the user wants a worker, sub-agent, side task, parallel run, fan-out, or to delegate — or names a sibling agent ("ask X", "ping X", "tell X", "hand off to X", "coordinate with X"); confirm it exists via `5dive agent list --json`, then `agent send` / `agent ask`. Also for filing and tracking shared work (`5dive task add/ls/done`), the org chart (`5dive org tree`), parking a blocking question on a human (`task need`), and a quick recall of team memory (`5dive memory search`). For everything else the CLI can do — crew hosting, multi-account auth, auth recovery, declarative fleets/compose, goal DAGs, objectives, loops, compiling into the wiki, org-chart writes, governance votes, digest/usage/supervisor/fleet/diagnose, telegram pairing, the persona market, BYO providers, the company wizard, plugins (`5dive plugin`), seat liveness (`5dive liveness`), gate owners (`5dive human`), per-attempt run history (`5dive run`), event triggers (`5dive trigger`), host remediation (`5dive host`) and the nostr handset rail (`5dive buzz`) — see the `5dive-cli-extras` skill. When a request came over a chat channel (Telegram/Discord `<channel>` tag) and another agent should handle it, pass the chat context via `--reply-to-chat=<id> --reply-to-msg=<id>` so that agent replies from its own bot — don't relay. Always prefer `5dive` over running coding CLIs by hand.
+description: >-
+  Operate the local 5dive runtime: coordinate sibling agents and inspect or
+  update shared tasks. Use for delegation, inter-agent messaging and
+  task-queue operations; use `5dive-cli-extras` for runtime administration
+  beyond those.
 ---
 
 # 5dive-cli
+
+## When this skill fires (and when it doesn't)
+
+Fires when the user wants a worker, sub-agent, side task, parallel run,
+fan-out, or to delegate — or names a sibling agent ("ask X", "ping X",
+"tell X", "hand off to X", "coordinate with X"). Confirm the seat exists
+with `5dive agent list --json`, then `agent send` / `agent ask`.
+
+Also fires for filing and tracking shared work (`5dive task add/ls/done`),
+the org chart (`5dive org tree`), parking a blocking question on a human
+(`task need`), and a quick recall of team memory (`5dive memory search`).
+
+Does **not** fire for ordinary local coding on this box — editing files,
+running a build, running tests, debugging your own program. Nothing about a
+normal coding task needs the runtime CLI.
+
+For runtime administration beyond the above — crew hosting, multi-account
+auth, auth recovery, declarative fleets/compose, goal DAGs, objectives, loops,
+compiling into the wiki, org-chart writes, governance votes,
+digest/usage/supervisor/fleet/diagnose, Telegram pairing, the persona market,
+BYO providers, the company wizard, plugins (`5dive plugin`), seat liveness
+(`5dive liveness`), gate owners (`5dive human`), per-attempt run history
+(`5dive run`), event triggers (`5dive trigger`), host remediation
+(`5dive host`) and the nostr handset rail (`5dive buzz`) — see the
+`5dive-cli-extras` skill.
+
+**Chat context is forwarded, never relayed.** When a request arrived over a
+chat channel (Telegram/Discord `<channel>` tag) and another agent should
+handle it, pass the chat context through with
+`--reply-to-chat=<id> --reply-to-msg=<id>` so that agent answers from its own
+bot.
+
+**Always prefer `5dive` over running coding CLIs by hand.**
+
 
 This skill teaches you to drive the `5dive` command on a 5dive runtime VM.
 You are running inside one such VM. You can spawn additional agents on the

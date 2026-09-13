@@ -1,11 +1,19 @@
 ---
 name: code-review
-description: Review a diff or pull request for correctness and quality — logic bugs, edge cases, error handling, race conditions, missing tests, API misuse, performance, and readability. Use when reviewing a PR, auditing a change before merge, giving feedback on someone's code, or self-reviewing your own diff. Keywords code review, PR review, pull request, diff review, review my changes, approve, request changes.
+description: >-
+  Review a diff or pull request for correctness first and quality second —
+  logic bugs, edge cases, error handling, races, missing tests, API misuse,
+  performance and readability. Use when reviewing someone else's PR, auditing
+  a change before merge, or self-reviewing your own diff.
 version: 1.0.0
 license: MIT
 ---
 
 # Code Review
+
+Keywords: code review, PR review, pull request, diff review, review my changes,
+approve, request changes.
+
 
 Review a change for correctness first, quality second. A review is not a formatting pass — it's a
 search for the ways this diff is wrong or will become wrong. Approve when you'd be comfortable

@@ -1,15 +1,31 @@
 ---
 name: compile-knowledge
 description: >-
-  Compile durable knowledge into interlinked-markdown stores the "karpathy
-  method" way — atomic files, [[wiki-links]], a maintained index. Use after
-  producing research, intel, a digest, a learned non-obvious fact, or finishing
-  any knowledge-shaped task, BEFORE you close it. Also when asked to "save this",
-  "write this to the wiki", "update the wiki/memory", "log this finding",
-  "structure this knowledge", or "follow the karpathy method".
+  Compile durable, judgement-shaped knowledge into interlinked markdown —
+  atomic files, [[wiki-links]], a maintained index. Use when persistence is
+  asked for explicitly ("save this", "write it to the wiki") or when the work
+  produced a decision record, a cause, or a gap analysis; ordinary factual
+  answers and routine task results are not a trigger.
 ---
 
 # compile-knowledge
+
+## When this fires
+
+Two triggers, and only these:
+
+1. **An explicit persistence ask** — "save this", "write this to the wiki",
+   "update the wiki/memory", "log this finding", "structure this knowledge",
+   "follow the karpathy method".
+2. **Durable judgement-shaped output** — a decision record, the CAUSE behind a
+   finding, a gap analysis, a non-obvious fact that cost real work to learn and
+   would cost it again.
+
+It does **not** fire on ordinary analytical work. Answering a factual question,
+summarising a file, explaining code, or reporting a routine task result
+produces nothing durable to compile. If the only thing you could write down is
+a restatement of what the repository or the transcript already says, skip it.
+
 
 Durable knowledge is worth keeping as many small, interlinked markdown files,
 compiled over time and surfaced through an index — not as one giant doc, a chat
