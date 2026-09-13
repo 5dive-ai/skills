@@ -13,7 +13,8 @@ Skills published by [5dive](https://5dive.ai?utm_source=github&utm_medium=referr
 | [`copywriting`](./copywriting) | Write, rewrite, and improve conversion-focused marketing copy for any page — homepage, landing, pricing, feature, product. Headlines, CTAs, value props, taglines, hero sections. |
 | [`no-ai-slop`](./no-ai-slop) | Edit drafts into sharper, more human writing while preserving the writer's voice, or detect AI-slop patterns without rewriting. Use to make a draft clearer, more direct, and less AI-sounding, or to check whether writing reads as AI. MIT, courtesy of Peter Yang. |
 | [`ad-creative`](./ad-creative) | Generate and iterate ad creative at scale — headlines, descriptions, and primary text for paid platforms — and refine based on real performance data. |
-| [`loops`](./loops) | The full lifecycle for agentic loops — recurring agents packaged as a portable [`LOOP.md`](https://agenticloops.dev?utm_source=github&utm_medium=referral&utm_campaign=skills-readme). Find + install + run an existing loop from the directory, or author a new one when nothing fits. The loop-level analogue of `find-skills` + `skill-creator` in one. |
+| [`find-loops`](./find-loops) | Search the [agenticloops.dev](https://agenticloops.dev?utm_source=github&utm_medium=referral&utm_campaign=skills-readme) directory for an existing agentic loop (a recurring, scheduled agent) and install it. The loop-level analogue of `find-skills`. |
+| [`loops`](./loops) | Author or modify a portable [`LOOP.md`](https://agenticloops.dev?utm_source=github&utm_medium=referral&utm_campaign=skills-readme) — a trigger + skills + a prompt in one file any harness can install and run on a schedule. The loop-level analogue of `skill-creator`; to install a loop that already exists use `find-loops`. |
 | [`playwright-e2e`](./playwright-e2e) | End-to-end testing and click-verification of web apps with Playwright. Install, write specs, drive authenticated pages, screenshot, and run in CI. Use to prove a web change actually works in a real browser before shipping. |
 | [`code-review`](./code-review) | Review a diff or pull request for correctness first, quality second. Logic bugs, edge cases, error handling, races, missing tests, API misuse, performance, readability, with a severity model and clear approve vs request-changes verdict. |
 | [`verify`](./verify) | Grade a delivered claim against the artifact instead of against the report of it. Split a claim into checkable assertions, grade each against a named instrument, and emit a three-state verdict — pass, fail, or not-reached — with what you did *not* check stated explicitly. |
@@ -62,3 +63,22 @@ npx skills add https://github.com/5dive-ai/skills --skill 5dive-cli --agent clau
 ## License
 
 MIT.
+
+## Description budget
+
+A skill's `name` + `description` is loaded at **selection** time, in every
+session, whether or not the skill fires. A command catalog there is paid on
+every turn and mis-routes the selector, so every description in this repo is
+capped at **two discriminating sentences** — the capability, the activation
+condition, and at most one exclusion. Command names, examples and feature
+catalogs live in the skill body or in `references/`.
+
+```bash
+./scripts/check-descriptions.sh          # enforces the cap, prints total chars
+```
+
+`evals/routing.json` holds the behavioural routing cases that guard the
+boundaries the cap is there to protect — an unrelated failed command must not
+load `diagnose`, a normal local coding task must not load `5dive-cli`,
+searching for a scheduled workflow selects `find-loops` while authoring a
+`LOOP.md` selects `loops`.

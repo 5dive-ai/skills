@@ -1,24 +1,32 @@
 ---
 name: loops
 description: >-
-  The full lifecycle for agentic loops — recurring, scheduled AI agents packaged
-  as a portable LOOP.md (the agenticloops.dev standard: a trigger + skills + a
-  prompt in one file any harness can install and run on a schedule). Use this
-  whenever the user wants to FIND, INSTALL, RUN, or BUILD a loop: "find a loop for
-  X", "is there a loop that…", "install a recurring agent that does X", "run this
-  loop", as well as "create a loop", "make an agentic loop", "write a LOOP.md",
-  "turn this into a recurring agent", "schedule an agent", "set up a cron job for
-  an agent", or any description of a repeating job they want an agent to do on a
-  timer (a daily digest, a competitor watcher, a triage sweep, a report pipeline,
-  "email me X every morning", "check Y every hour") — even if they never say the
-  word "loop". Always search the directory first and install an existing loop when
-  one fits; author a new LOOP.md only when nothing does. This is the loop-level
-  analogue of skill-creator + find-skills combined. For an ad-hoc in-session
-  multi-agent run (spawn, verify, panel, fan-out) use the `loops` skill instead;
-  for authoring a reusable SKILL.md use skill-creator.
+  Author or modify a LOOP.md — the portable agenticloops.dev format for a
+  recurring, scheduled agent (trigger + skills + prompt in one file). Use when
+  writing a new loop or editing an existing one; to find and install a loop
+  that already exists use `find-loops`.
 ---
 
 # Loops — find, install, run & build recurring agents
+
+## This skill, or `find-loops`?
+
+- **`loops` (this one)** — AUTHOR or MODIFY a `LOOP.md`: the portable
+  agenticloops.dev format (a trigger + skills + a prompt in one file any
+  harness can install and run on a schedule). Fires on "create a loop", "make
+  an agentic loop", "write a LOOP.md", "turn this into a recurring agent",
+  "edit this loop".
+- **`find-loops`** — SEARCH the directory and INSTALL a loop that already
+  exists. Fires on "find a loop for X", "is there a loop that…", "install a
+  recurring agent that does X".
+
+Always search the directory first and install an existing loop when one fits;
+author a new `LOOP.md` only when nothing does.
+
+For an ad-hoc in-session multi-agent run (spawn, verify, panel, fan-out) use
+the `5dive-cli-extras` skill; for authoring a reusable `SKILL.md` use
+`skill-creator`.
+
 
 The full lifecycle for **agentic loops** — the `LOOP.md` format behind [agenticloops.dev](https://agenticloops.dev).
 

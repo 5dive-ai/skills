@@ -1,11 +1,24 @@
 ---
 name: verify
-description: Grade a delivered claim against the artifact instead of against the report of the artifact. Use when acting as a verifier or reviewer on someone else's finished work, checking whether a fix actually landed, confirming a task's done result is true, auditing a claim that has no diff to read — a backfill, a migration, a deploy, a config change — or self-auditing your own claim before you publish it. Covers splitting a claim into checkable assertions, the three-state verdict (pass, fail, not-reached), and the specific failure modes that survive a careless check. Keywords verify, verification, grade, verdict, acceptance, prove it, did it actually work, confirm the fix, check the claim, QA sign-off.
+description: >-
+  Grade a delivered claim against the artifact instead of against the report
+  of it, emitting a three-state verdict — pass, fail, or not-reached — with
+  what you did not check stated explicitly. Use when verifying someone's
+  finished work, confirming a fix actually landed, or self-auditing your own
+  claim before you publish it.
 version: 1.1.0
 license: MIT
 ---
 
 # Verify
+
+Covers splitting a claim into checkable assertions, the three-state verdict
+(pass, fail, not-reached), and the specific failure modes that survive a
+careless check.
+
+Keywords: verify, verification, grade, verdict, acceptance, prove it, did it
+actually work, confirm the fix, check the claim, QA sign-off.
+
 
 **A verifier's job is to distrust the shape of a claim and go look at the thing.**
 

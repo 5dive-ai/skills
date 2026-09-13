@@ -1,11 +1,23 @@
 ---
 name: deep-research
-description: Running structured, multi-source research that produces a trustworthy, cited synthesized answer. Use when a question needs more than a single lookup — comparing options, validating a claim, surveying a market or technology, or briefing a decision where being wrong is costly. Covers scoping (and narrowing) the question, fanning out across sources, judging source quality, adversarially verifying each key claim, separating fact from inference, and reporting with explicit confidence. Keywords deep research, multi-source, fact-check, verify, synthesize, cited report, source credibility, due diligence.
+description: >-
+  Run structured multi-source research that produces a cited, adversarially
+  verified synthesis with explicit confidence. Use when a question needs more
+  than a single lookup and being wrong is costly — comparing options,
+  validating a claim, surveying a market, briefing a decision.
 version: 1.0.0
 license: MIT
 ---
 
 # Deep Research Guide
+
+Covers scoping (and narrowing) the question, fanning out across sources,
+judging source quality, adversarially verifying each key claim, separating fact
+from inference, and reporting with explicit confidence.
+
+Keywords: deep research, multi-source, fact-check, verify, synthesize, cited
+report, source credibility, due diligence.
+
 
 Produce a **trustworthy synthesized answer**, not a pile of links. The output of research is a
 decision-grade brief: a clear claim, the evidence behind it, citations, and an honest map of

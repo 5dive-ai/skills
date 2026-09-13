@@ -1,11 +1,21 @@
 ---
 name: playwright-e2e
-description: End-to-end testing and click-verification of web apps with Playwright — install, write specs, drive authenticated pages, take screenshots, and run in CI. Use when verifying a web change actually works in a real browser, testing user flows, debugging a UI bug live, or confirming an authed/gated page before shipping. Keywords Playwright, e2e, browser test, click test, screenshot, headless.
+description: >-
+  End-to-end test and click-verify a web app with Playwright — write specs,
+  drive authenticated pages, screenshot, and run in CI. Use when a web change
+  has to be proven in a real browser rather than by unit tests.
 version: 1.0.0
 license: MIT
 ---
 
 # Playwright E2E & Click-Verification Guide
+
+Use it when verifying a web change actually works in a real browser, testing
+user flows, debugging a UI bug live, or confirming an authed/gated page before
+shipping.
+
+Keywords: Playwright, e2e, browser test, click test, screenshot, headless.
+
 
 Drive a real browser to **prove a web change works** — not just that it compiles. Use this to
 verify flows end-to-end, reproduce UI bugs, and screenshot pages. Pairs with `nextjs-app`.

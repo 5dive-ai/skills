@@ -1,9 +1,51 @@
 ---
 name: 5dive-cli-extras
-description: Extended `5dive` CLI recipes beyond the everyday core — see the `5dive-cli` skill first for spawning/messaging sibling agents and the basic task queue. Use THIS skill for hiring a ready-made persona off the agent market (`5dive market`, `hire --from-market`) or firing one (`5dive fire`), auth recovery (`error.class=auth_required`, `--defer-auth`, device-code login via `agent auth start/poll/submit`), BYO-provider agents (`--provider`), multi-account auth (`5dive account`), declarative fleets and company templates (`5dive up/down/ps/export`, `team import`), hosting a CrewAI crew (`5dive crew`), controlling agents on OTHER registered boxes (`5dive fleet`), recurring/scheduled work (`task add --recurring`, `5dive heartbeat`) and projects (`5dive project add`), building or editing multi-agent loops — a relay with optional human gates (`task loop start`) or a maker→verifier review loop (`task add --verifier`, `task reject`, `5dive loop` LOOP-7 verbs) — decomposing an outcome into a guardrailed task DAG (`5dive goal add`) or a self-steering objective bound to a live metric (`5dive objective`), compiling durable knowledge into the shared wiki (`5dive memory add`), org-chart writes (`5dive org set`), convening a governance vote (`5dive council`), reading fleet health / token burn / the daily standup (`5dive supervisor`, `5dive usage`, `5dive digest`), a machine-readable health check (`5dive doctor --json`, `5dive selfcheck --json`), a task's causal history (`5dive trace`), the current model id per alias (`5dive models`), Telegram/Discord pairing and shared team-bot setup, a delegated GitHub push-for-review (`5dive push`), the onboarding wizard (`5dive company`), installing and rolling back plugins (`5dive plugin`, `5dive market --kind=plugin`), proving a seat is alive against work it actually WROTE (`5dive liveness`), the people who can clear a gate (`5dive human`), one agent's single attempt at one task (`5dive run`), turning signed external events into tasks (`5dive trigger`), hardened host remediation (`5dive host`), the nostr handset rail (`5dive buzz`, `agent buzz enable`), and two-stage memory recall on a large store (`memory search --index` + `memory get`).
+description: >-
+  Administer the local 5dive runtime beyond everyday delegation: accounts and
+  auth recovery, declarative fleets and remote boxes, loops and goal DAGs,
+  governance, memory and wiki writes, plugins and host remediation. Use when
+  runtime administration itself is the task; `5dive-cli` already covers
+  spawning agents, messaging them and the shared task queue.
 ---
 
 # 5dive-cli-extras
+
+## What lives in here
+
+Read the `5dive-cli` skill first for spawning and messaging sibling agents and
+the basic task queue. This skill is the administration surface on top of it:
+
+- **Market and hiring** — hire a ready-made persona (`5dive market`,
+  `hire --from-market`) or fire one (`5dive fire`).
+- **Auth and accounts** — auth recovery (`error.class=auth_required`,
+  `--defer-auth`, device-code login via `agent auth start/poll/submit`),
+  BYO-provider agents (`--provider`), multi-account auth (`5dive account`).
+- **Fleets and hosts** — declarative fleets and company templates
+  (`5dive up/down/ps/export`, `team import`), agents on other registered boxes
+  (`5dive fleet`), hosting a CrewAI crew (`5dive crew`), hardened host
+  remediation (`5dive host`), the onboarding wizard (`5dive company`).
+- **Recurring and structured work** — `task add --recurring`,
+  `5dive heartbeat`, projects (`5dive project add`), multi-agent loops (a relay
+  with optional human gates via `task loop start`, or a maker→verifier review
+  loop via `task add --verifier`, `task reject`, the `5dive loop` LOOP-7 verbs),
+  guardrailed task DAGs (`5dive goal add`), self-steering objectives bound to a
+  live metric (`5dive objective`), signed external events turned into tasks
+  (`5dive trigger`).
+- **Knowledge and org** — compiling durable knowledge into the shared wiki
+  (`5dive memory add`), two-stage recall on a large store
+  (`memory search --index` + `memory get`), org-chart writes (`5dive org set`),
+  governance votes (`5dive council`).
+- **Health and history** — fleet health, token burn and the daily standup
+  (`5dive supervisor`, `5dive usage`, `5dive digest`), machine-readable health
+  checks (`5dive doctor --json`, `5dive selfcheck --json`), a task's causal
+  history (`5dive trace`), the current model id per alias (`5dive models`),
+  seat liveness (`5dive liveness`), gate owners (`5dive human`), one agent's
+  single attempt at one task (`5dive run`).
+- **Delivery and comms** — a delegated GitHub push-for-review (`5dive push`),
+  Telegram/Discord pairing and shared team-bot setup, the nostr handset rail
+  (`5dive buzz`, `agent buzz enable`), installing and rolling back plugins
+  (`5dive plugin`, `5dive market --kind=plugin`).
+
 
 Companion to the `5dive-cli` skill: everything on the `5dive` CLI that isn't
 reached for every session. Read `5dive-cli` first for the mental model,

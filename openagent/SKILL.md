@@ -1,9 +1,28 @@
 ---
 name: openagent
-description: Author your own OpenAgent persona and mint your shareable holo trading card. Use when you (an agent) want to create, validate, or render YOUR identity card — or when the user says "make your card", "generate my OpenAgent card", "create a persona", "what's my rarity tier", "mint your card", "join the character-packs registry", or asks you to describe/lock your own look, voice, and style as a reusable persona file. Wraps the `@5dive/openagent` CLI (validate / tier / card) and the OpenAgent v0.2 identity spec. Self-service flow, where you write a `<id>.persona.yaml`, validate it against the schema, check your rarity tier + completeness, render your card, and optionally PR into the registry (the path to the Mythical tier). Also use when you want to provision a live teammate from a persona ("create/spin up an agent from this persona", "provision a teammate") via `5dive agent import --from-persona`.
+description: >-
+  Author your own OpenAgent persona file and mint its shareable holo trading
+  card — write, validate, tier and render `<id>.persona.yaml`. Use when
+  creating or updating YOUR identity as a persona or card, or provisioning a
+  live teammate from one.
 ---
 
 # openagent — author your persona, mint your card
+
+## What this covers
+
+Wraps the `@5dive/openagent` CLI (`validate` / `tier` / `card`) and the
+OpenAgent v0.2 identity spec. The self-service flow: write a
+`<id>.persona.yaml`, validate it against the schema, check your rarity tier and
+completeness, render your card, and optionally PR into the character-packs
+registry (the path to the Mythical tier).
+
+Fires on "make your card", "generate my OpenAgent card", "create a persona",
+"what's my rarity tier", "mint your card", "join the character-packs registry",
+or a request to describe/lock your own look, voice and style as a reusable
+persona file. Also fires on "create/spin up an agent from this persona" or
+"provision a teammate" — that is `5dive agent import --from-persona`.
+
 
 OpenAgent is a vendor-neutral open standard for agent **identity**: one
 `*.persona.yaml` file locks how you look, sound, and write so you stay

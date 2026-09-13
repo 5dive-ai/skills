@@ -1,0 +1,93 @@
+{
+  "$comment": "Behavioural routing evals for skill SELECTION (DIVE-4407). Each case is a realistic request; the grader loads only skill names + descriptions and records which skills it would activate. Cases test the routing boundary, not the wording of any description.",
+  "skill_name": "_routing",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "npm run build just failed with 'Cannot find module ./lib/parse'. Fix it.",
+      "expect_selected": [],
+      "expect_not_selected": ["diagnose", "5dive-cli", "5dive-cli-extras"],
+      "assertions": [
+        "An ordinary failed command in the user's own code does NOT activate diagnose",
+        "No 5dive runtime skill is loaded for a local build failure"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My agent can't authenticate any more — every 5dive command exits with auth_required and the service looks down on the box.",
+      "expect_selected": ["diagnose"],
+      "expect_not_selected": [],
+      "assertions": ["A runtime-level failure (auth, service, box health) DOES activate diagnose"]
+    },
+    {
+      "id": 3,
+      "prompt": "Is there already a recurring agent that posts a competitor digest every morning? If so install it.",
+      "expect_selected": ["find-loops"],
+      "expect_not_selected": ["loops"],
+      "assertions": ["Searching for and installing an existing scheduled workflow selects find-loops, not loops"]
+    },
+    {
+      "id": 4,
+      "prompt": "Nothing in the directory fits. Write me a new LOOP.md that runs a triage sweep over our inbox every hour.",
+      "expect_selected": ["loops"],
+      "expect_not_selected": ["find-loops"],
+      "assertions": ["Authoring a new LOOP.md selects loops, not find-loops"]
+    },
+    {
+      "id": 5,
+      "prompt": "Add a null check to src/parse.ts and run the unit tests.",
+      "expect_selected": [],
+      "expect_not_selected": ["5dive-cli", "5dive-cli-extras", "diagnose", "compile-knowledge"],
+      "assertions": ["A normal local coding task loads no 5dive runtime skill and no knowledge skill"]
+    },
+    {
+      "id": 6,
+      "prompt": "Spin up a worker to run the migration in parallel and ping quinn when it's done.",
+      "expect_selected": ["5dive-cli"],
+      "expect_not_selected": ["5dive-cli-extras"],
+      "assertions": ["Delegation plus inter-agent messaging selects 5dive-cli, not the administration skill"]
+    },
+    {
+      "id": 7,
+      "prompt": "Set up multi-account auth for the fleet and export the company template so another box can import it.",
+      "expect_selected": ["5dive-cli-extras"],
+      "expect_not_selected": [],
+      "assertions": ["Runtime administration (accounts, declarative fleets) selects 5dive-cli-extras"]
+    },
+    {
+      "id": 8,
+      "prompt": "What port does the dev server listen on?",
+      "expect_selected": [],
+      "expect_not_selected": ["compile-knowledge", "deep-research", "5dive-cli"],
+      "assertions": ["An ordinary factual answer does not activate compile-knowledge or deep-research"]
+    },
+    {
+      "id": 9,
+      "prompt": "We found the cause of the nightly deploy failures and decided to stop auto-deploying schema. Write that decision down where the team will find it next time.",
+      "expect_selected": ["compile-knowledge"],
+      "expect_not_selected": [],
+      "assertions": ["Durable judgement-shaped output (a decision record + a cause) activates compile-knowledge"]
+    },
+    {
+      "id": 10,
+      "prompt": "Summarise what this 300-line file does.",
+      "expect_selected": [],
+      "expect_not_selected": ["compile-knowledge"],
+      "assertions": ["Routine analytical work that restates existing material does not activate compile-knowledge"]
+    },
+    {
+      "id": 11,
+      "prompt": "Here's the diff on my branch — anything wrong with it before I merge?",
+      "expect_selected": ["code-review"],
+      "expect_not_selected": ["verify"],
+      "assertions": ["Reviewing an unmerged diff selects code-review, not verify"]
+    },
+    {
+      "id": 12,
+      "prompt": "The backfill job reports it migrated 12,000 rows. Confirm that actually happened.",
+      "expect_selected": ["verify"],
+      "expect_not_selected": ["code-review"],
+      "assertions": ["Grading a claim with no diff to read selects verify, not code-review"]
+    }
+  ]
+}

@@ -1,9 +1,27 @@
 ---
 name: diagnose
-description: Self-diagnosis skill for 5dive agents. Trigger this skill whenever the user says something is broken, not working, or behaving unexpectedly — or when any tool or command exits with an error. Runs a structured health check covering auth state, service health, disk, memory, recent CLI errors, and skill integrity. Surfaces a root-cause summary so the agent can fix the problem itself instead of asking the user. Also exposes a security audit sub-command for SSH keys, open ports, auth failures, and risky file permissions.
+description: >-
+  Diagnose a failing 5dive agent runtime on its own VM — auth state, service
+  health, disk, memory, recent CLI errors, skill integrity — and return a
+  root-cause report, plus an optional host security audit. Use only when the
+  5dive runtime itself is suspect; a command, build or test failing inside
+  your own work is not a trigger.
 ---
 
 # diagnose
+
+## When NOT to use this
+
+This skill diagnoses the **5dive agent runtime** — auth state, service health,
+disk, memory, recent CLI errors, skill integrity — on the VM the agent runs on.
+
+It is **not** the handler for a failed command in ordinary work. A build that
+breaks, a test that goes red, a script that exits non-zero, a compiler error, a
+network call that 404s: debug those in place. Reach for `diagnose` only when
+the evidence points at the runtime itself — the agent cannot authenticate,
+`5dive` commands fail systemically, a service is down, the box is out of disk
+or memory, or installed skills are missing or corrupt.
+
 
 This skill turns your agent into its own first-line support. Instead of forwarding
 "something's wrong" messages to a human, the agent inspects the VM, identifies the
