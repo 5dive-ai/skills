@@ -544,11 +544,24 @@ The agent's own process never touches a GitHub token; a root-only helper
 mints one scoped to just that repo, pushes, and discards it.
 
 `--open-pr` opens the PR in the same call. Since 0.35.1 (DIVE-4423) it **mints a
-conventional-commit PR title itself** so `pr-title-lint` can pass: it reuses the
-commit subject only for a single-commit range, and derives a type over the whole
-range otherwise. Pass `--pr-title=` only when you want to override that — a
-hand-written title that is not conventional-commit shaped reds the lint and the PR
-needs a manual retitle.
+conventional-commit PR title itself** so `pr-title-lint` can pass. Two paths, and
+which one you get is not only about your commits:
+
+1. **your commit subject**, reused verbatim (with the ident appended if missing) —
+   but ONLY when the range holds exactly one commit AND that subject passes the
+   lint;
+2. otherwise `<type>(<IDENT>): <the task's title>`, with the type derived over the
+   WHOLE range (feat if any commit declares feat, else fix, else chore) so a `wip`
+   first commit cannot demote a feature's release cut.
+
+**The lint is read from the TARGET repo**, at `.github/workflows/pr-title-lint.yml`,
+and a repo that has no such file fails the check by definition — so in a docs-only
+repo like `5dive-ai/skills` path 1 can never fire and every delegated PR is titled
+from the ROW, whatever your commit says. That is not a bug to work around; it just
+means the row title is the PR title there, so write the row title you want on the PR.
+
+Pass `--pr-title=` only to override the mint — a hand-written title that is not
+conventional-commit shaped reds the lint and the PR needs a manual retitle.
 
 ## Company wizard: `5dive company`
 
