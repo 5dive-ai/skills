@@ -52,6 +52,21 @@ reached for every session. Read `5dive-cli` first for the mental model,
 the `--json` output contract, and the core spawn/send/task recipes — they
 apply here too and aren't repeated.
 
+## Host lifecycle: `5dive init` and `5dive uninstall`
+
+`5dive init` is the interactive first-run wizard for a one-agent host. It is a
+human-facing bootstrap path, not the way an existing agent should add a sibling
+(use `agent create` for that).
+
+```bash
+5dive init
+5dive uninstall
+5dive uninstall --purge --yes
+```
+
+Plain `5dive uninstall` removes 5dive. `--purge` additionally wipes its state
+and user, so treat that form as destructive and require explicit human intent.
+
 ## Advanced agent create: personas, BYO providers, auth deferral
 
 #### Hire a ready-made persona from the agent market
@@ -535,12 +550,33 @@ default) can push ONE named feature branch for PR review once its task's
 gate is cleared and bound to that branch:
 
 ```bash
-5dive push DIVE-42 [--branch=<b>] [--dry-run]
+5dive push DIVE-42 [--branch=<b>] [--repo=<o/r>] [--dry-run] [--yes]
+5dive push DIVE-42 --open-pr [--pr-title=<t>] [--pr-body-file=<f>] [--pr-draft]
 sudo 5dive push setup   # once per box: scaffold the GitHub App config
 ```
 
 The agent's own process never touches a GitHub token; a root-only helper
 mints one scoped to just that repo, pushes, and discards it.
+
+`--open-pr` opens the PR in the same call. Since 0.35.1 (DIVE-4423) it **mints a
+conventional-commit PR title itself** so `pr-title-lint` can pass. Two paths, and
+which one you get is not only about your commits:
+
+1. **your commit subject**, reused verbatim (with the ident appended if missing) —
+   but ONLY when the range holds exactly one commit AND that subject passes the
+   lint;
+2. otherwise `<type>(<IDENT>): <the task's title>`, with the type derived over the
+   WHOLE range (feat if any commit declares feat, else fix, else chore) so a `wip`
+   first commit cannot demote a feature's release cut.
+
+**The lint is read from the TARGET repo**, at `.github/workflows/pr-title-lint.yml`,
+and a repo that has no such file fails the check by definition — so in a docs-only
+repo like `5dive-ai/skills` path 1 can never fire and every delegated PR is titled
+from the ROW, whatever your commit says. That is not a bug to work around; it just
+means the row title is the PR title there, so write the row title you want on the PR.
+
+Pass `--pr-title=` only to override the mint — a hand-written title that is not
+conventional-commit shaped reds the lint and the PR needs a manual retitle.
 
 ## Company wizard: `5dive company`
 
@@ -613,6 +649,22 @@ the CAUSE behind a finding — because that is a claim you are making, not a fac
 lying in the transcript. Compile those yourself, to the shared wiki, before you
 close the row. **The pipeline never publishes to the wiki; only you can.**
 
+## Publish zero-human evidence: `5dive proof`
+
+`proof` publishes the digest-derived badge, datapoint, and history to a repo;
+the scheduled form installs a daily root cron job:
+
+```bash
+5dive proof publish --dry-run
+5dive proof publish --repo=<url> --branch=<branch>
+5dive proof on --repo=<url> --branch=status --at=<0-23>
+5dive proof off
+5dive proof status --json
+```
+
+Use the dry run before first publication. `off` removes the cron configuration
+but retains the saved publishing configuration.
+
 ## Read the fleet: digest, usage, supervisor
 
 Read-only surfaces, no agent reasoning, no tokens burned. **`usage`/`cost`/
@@ -648,11 +700,31 @@ only want the behaviour off:
 5dive market --kind=plugin                   # browse what's available
 5dive plugin list --json                     # installed, with version and tier
 sudo 5dive plugin add <plugin>[@<marketplace>] [--yes]
+sudo 5dive plugin add <owner>/<repo>[/<plugin>] [--as=<marketplace>] [--yes]
+sudo 5dive plugin setup <plugin>[@<marketplace>] [--yes]   # run its host step
+sudo 5dive plugin upgrade <plugin>[@<marketplace>]
+sudo 5dive plugin remove <plugin>[@<marketplace>]
 sudo 5dive plugin enable|disable <plugin>    # a flag flip; the code stays on disk
 sudo 5dive plugin rollback <plugin> [<version>]
-sudo 5dive plugin marketplace add <source> [--as=<name>]
+sudo 5dive plugin marketplace add <local-path|owner/repo[@ref]|git-url> [--as=<name>]
+sudo 5dive plugin marketplace remove <name>
 5dive plugin marketplace list --json
 ```
+
+Two things changed under this verb since 0.32.0:
+
+- **`add` takes a GitHub repo directly** (DIVE-4290) — `owner/repo[/plugin]`
+  registers the marketplace and installs in ONE step, so there is no longer a
+  `marketplace add` then `add` dance for a repo you found on GitHub.
+- **`plugin setup` runs a plugin's declared one-time host step** (DIVE-4467) so a
+  host step can be run without a terminal. It reads the manifest through the
+  ENABLED pointer — the version actually live on this box, never the marketplace
+  source — and refuses when the plugin is disabled or declares no
+  `fivedive.setup.command`. **As of CLI 0.39.0** (DIVE-4475) the step runs **as the
+  calling seat**, not as root, so invoke it with `sudo` from the seat that owns the
+  box-half. On a box still on 0.38.0 it runs the publisher's command as root, which
+  rewrites `SUDO_USER` to `root` one process later and makes the step refuse — check
+  `5dive --version` before you trust this paragraph.
 
 ## Is a seat actually alive? `5dive liveness` (DIVE-3778)
 
@@ -818,4 +890,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.32.0** (tag `bb35e2be`, 2026-09-11)._
+_Synced to 5dive CLI **0.39.0** (tag `e68f734c`, 2026-09-14). A given box's
+binary can lag by up to a day behind main (nightly update channel) — trust
+`5dive --help` if they differ._
