@@ -318,6 +318,7 @@ it and don't guess — gate it:
 # -> task goes blocked; the human gets an alert with tap buttons.
 
 5dive task inbox --json        # every unanswered HUMAN gate in the fleet
+5dive task gates --json        # pure alias for `inbox` (DIVE-4310) — same function
 5dive task queue --json        # gates ROUTED TO YOU, filed without waking you
 5dive task answer DIVE-12 --value="flag" --json   # records + unblocks + pings the owner
 ```
@@ -332,6 +333,17 @@ one-off check myself?"), and put every mechanism in the task BODY.
 reach for it when the ask genuinely cannot be written in plain English, not to get
 past the check. Always pass `--recommend` for decision/approval — the alert leads
 with your recommendation so the human can one-tap it.
+
+Under the 25-word refusal sits a **~15-word render budget**: an ask longer than
+that is *warned* ("will render cut") because the gate message truncates it on a
+phone. The warning files; the refusal does not. Aim at the 15.
+
+**`--options` is decision-only.** `--options` on any other `--type` is refused
+outright (`--options only applies to --type=decision`), and `--recommend` on a
+decision needs `--options` to match against. Since 0.36.0 (DIVE-4462) a set of
+options that are all **single characters** is refused too — the options ARE the
+buttons a person taps, and a button reading "A" names no outcome. Spell each one
+as a plain outcome.
 
 **Risk tiers (`--tier=0|1|2`):** `0` auto-clears immediately (needs
 `--recommend`, no ping); `1` pings but auto-applies the recommendation if
@@ -354,6 +366,26 @@ Pinning `--tier=2` yourself, or tripping a category floor, makes `approval` and
 secret_provision` is human-only by declaration and outranks the tier.
 So **never hand-pass `--tier=1` on an approval to keep it off a human** — that
 is already the default and the flag is a no-op.
+
+**Since 0.34.0 a tier<2 `decision` gate routes to the ORG LEAD by kind
+(DIVE-4415)** — it does not reach the paired human at all, and it does not read
+the `gate_builder_routing` preference. That preference governs only an unbound
+tier<2 `approval` or `manual` gate. Read the live answer with
+`5dive task routing`, not from memory.
+
+**A gate that DOES reach the paired human must name the capability it consumes
+(DIVE-4346), or it is refused at filing.** A customer is tapped for exactly four
+things — money, a secret, something irreversible, or something only a person at a
+browser or keyboard can do — so declare one:
+`--needs=spend_authority|secret_provision|human_tap`. "This is hard" is not one of
+the four; if you cannot name the capability, it is a decision you find
+uncomfortable, not a human gate.
+
+Forwarding a lead-held gate up to the paired human is `5dive task gate-escalate`,
+and only the gate's filer, their lead, its routed reviewer, the org coordinator or
+a human at a real login session may do it (DIVE-4365). **Do not re-file the gate
+as `--tier=2` to reach a person** — that loses the gate's history and is the
+failure the rail exists to stop.
 
 A routed gate QUEUES for the reviewer's next natural wake rather than waking
 their session; `--urgent` pings at file time. It is not `--recommend` — "I think
@@ -453,6 +485,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). A given box's
+_Synced to 5dive CLI **0.38.0** (tag `e6e132e5`, 2026-09-14). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

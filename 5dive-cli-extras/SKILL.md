@@ -535,12 +535,20 @@ default) can push ONE named feature branch for PR review once its task's
 gate is cleared and bound to that branch:
 
 ```bash
-5dive push DIVE-42 [--branch=<b>] [--dry-run]
+5dive push DIVE-42 [--branch=<b>] [--repo=<o/r>] [--dry-run] [--yes]
+5dive push DIVE-42 --open-pr [--pr-title=<t>] [--pr-body-file=<f>] [--pr-draft]
 sudo 5dive push setup   # once per box: scaffold the GitHub App config
 ```
 
 The agent's own process never touches a GitHub token; a root-only helper
 mints one scoped to just that repo, pushes, and discards it.
+
+`--open-pr` opens the PR in the same call. Since 0.35.1 (DIVE-4423) it **mints a
+conventional-commit PR title itself** so `pr-title-lint` can pass: it reuses the
+commit subject only for a single-commit range, and derives a type over the whole
+range otherwise. Pass `--pr-title=` only when you want to override that — a
+hand-written title that is not conventional-commit shaped reds the lint and the PR
+needs a manual retitle.
 
 ## Company wizard: `5dive company`
 
@@ -648,11 +656,28 @@ only want the behaviour off:
 5dive market --kind=plugin                   # browse what's available
 5dive plugin list --json                     # installed, with version and tier
 sudo 5dive plugin add <plugin>[@<marketplace>] [--yes]
+sudo 5dive plugin add <owner>/<repo>[/<plugin>] [--as=<marketplace>] [--yes]
+sudo 5dive plugin setup <plugin>[@<marketplace>] [--yes]   # run its host step
+sudo 5dive plugin upgrade <plugin>[@<marketplace>]
+sudo 5dive plugin remove <plugin>[@<marketplace>]
 sudo 5dive plugin enable|disable <plugin>    # a flag flip; the code stays on disk
 sudo 5dive plugin rollback <plugin> [<version>]
-sudo 5dive plugin marketplace add <source> [--as=<name>]
+sudo 5dive plugin marketplace add <local-path|owner/repo[@ref]|git-url> [--as=<name>]
+sudo 5dive plugin marketplace remove <name>
 5dive plugin marketplace list --json
 ```
+
+Two things changed under this verb since 0.32.0:
+
+- **`add` takes a GitHub repo directly** (DIVE-4290) — `owner/repo[/plugin]`
+  registers the marketplace and installs in ONE step, so there is no longer a
+  `marketplace add` then `add` dance for a repo you found on GitHub.
+- **`plugin setup` runs a plugin's declared one-time host step** (DIVE-4467) so a
+  host step can be run without a terminal. It reads the manifest through the
+  ENABLED pointer — the version actually live on this box, never the marketplace
+  source — and refuses when the plugin is disabled or declares no
+  `fivedive.setup.command`. Since DIVE-4475 the step runs **as the calling seat**,
+  not as root, so invoke it with `sudo` from the seat that owns the box-half.
 
 ## Is a seat actually alive? `5dive liveness` (DIVE-3778)
 
@@ -818,4 +843,4 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.32.0** (tag `bb35e2be`, 2026-09-11)._
+_Synced to 5dive CLI **0.38.0** (tag `e6e132e5`, 2026-09-14)._
