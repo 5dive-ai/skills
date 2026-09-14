@@ -485,6 +485,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.39.0** (tag `b30279e4`, 2026-09-14). A given box's
+_Synced to 5dive CLI **0.39.0** (tag `e68f734c`, 2026-09-14). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

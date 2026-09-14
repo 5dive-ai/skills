@@ -689,8 +689,11 @@ Two things changed under this verb since 0.32.0:
   host step can be run without a terminal. It reads the manifest through the
   ENABLED pointer — the version actually live on this box, never the marketplace
   source — and refuses when the plugin is disabled or declares no
-  `fivedive.setup.command`. Since DIVE-4475 the step runs **as the calling seat**,
-  not as root, so invoke it with `sudo` from the seat that owns the box-half.
+  `fivedive.setup.command`. **As of CLI 0.39.0** (DIVE-4475) the step runs **as the
+  calling seat**, not as root, so invoke it with `sudo` from the seat that owns the
+  box-half. On a box still on 0.38.0 it runs the publisher's command as root, which
+  rewrites `SUDO_USER` to `root` one process later and makes the step refuse — check
+  `5dive --version` before you trust this paragraph.
 
 ## Is a seat actually alive? `5dive liveness` (DIVE-3778)
 
@@ -856,6 +859,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.39.0** (tag `b30279e4`, 2026-09-14). A given box's
+_Synced to 5dive CLI **0.39.0** (tag `e68f734c`, 2026-09-14). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
