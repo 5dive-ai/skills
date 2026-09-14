@@ -856,4 +856,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.38.0** (tag `e6e132e5`, 2026-09-14)._
+_Synced to 5dive CLI **0.39.0** (tag `b30279e4`, 2026-09-14). A given box's
+binary can lag by up to a day behind main (nightly update channel) — trust
+`5dive --help` if they differ._
