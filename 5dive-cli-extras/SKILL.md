@@ -52,6 +52,21 @@ reached for every session. Read `5dive-cli` first for the mental model,
 the `--json` output contract, and the core spawn/send/task recipes — they
 apply here too and aren't repeated.
 
+## Host lifecycle: `5dive init` and `5dive uninstall`
+
+`5dive init` is the interactive first-run wizard for a one-agent host. It is a
+human-facing bootstrap path, not the way an existing agent should add a sibling
+(use `agent create` for that).
+
+```bash
+5dive init
+5dive uninstall
+5dive uninstall --purge --yes
+```
+
+Plain `5dive uninstall` removes 5dive. `--purge` additionally wipes its state
+and user, so treat that form as destructive and require explicit human intent.
+
 ## Advanced agent create: personas, BYO providers, auth deferral
 
 #### Hire a ready-made persona from the agent market
@@ -633,6 +648,22 @@ JUDGEMENT-shaped knowledge — a wiki page, a decision record, a gap analysis,
 the CAUSE behind a finding — because that is a claim you are making, not a fact
 lying in the transcript. Compile those yourself, to the shared wiki, before you
 close the row. **The pipeline never publishes to the wiki; only you can.**
+
+## Publish zero-human evidence: `5dive proof`
+
+`proof` publishes the digest-derived badge, datapoint, and history to a repo;
+the scheduled form installs a daily root cron job:
+
+```bash
+5dive proof publish --dry-run
+5dive proof publish --repo=<url> --branch=<branch>
+5dive proof on --repo=<url> --branch=status --at=<0-23>
+5dive proof off
+5dive proof status --json
+```
+
+Use the dry run before first publication. `off` removes the cron configuration
+but retains the saved publishing configuration.
 
 ## Read the fleet: digest, usage, supervisor
 

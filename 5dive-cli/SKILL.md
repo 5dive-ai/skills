@@ -213,6 +213,19 @@ is **also** a member, don't relay the answer yourself — hand it off with
 `<channel>` tag's `chat_id`/`message_id`) so the target agent posts directly
 via its own bot. See `5dive-cli-extras` for the full chat-delegation walkthrough.
 
+### Read the agent-to-agent ledger: `5dive a2a`
+
+The A2A ledger is a read-only traffic summary; it records who exchanged
+messages on which rows, but never stores message text:
+
+```bash
+5dive a2a rounds --json
+5dive a2a rounds --agent=scout --window=24 --json
+```
+
+The default window is 24 hours. An unreadable ledger reports `UNKNOWN` and
+exits 3 rather than rendering the fleet as idle.
+
 ### Track shared work: the task queue + org chart
 
 The host has a shared task queue and org chart in a group-writable sqlite
@@ -459,11 +472,11 @@ routing decision without running anything.
 ## Reference
 
 - `references/commands.md` — every subcommand and flag, copy/pasteable.
-  Includes the less-frequent top-level verbs not recapped above: `deploy`
-  (delegated production deploy, INST-5), `bug` (diagnostic issue filing),
-  `constitution` (front door onto the machine-enforced guardrails), `ui`
-  (local read-only web UI: org chart/queue/gates, DIVE-2655), `acp`
-  (speak ACP over stdio so a client like Buzz/Zed can select 5dive as a
+  Includes the less-frequent top-level verbs not recapped above: `5dive deploy`
+  (delegated production deploy, INST-5), `5dive bug` (diagnostic issue filing),
+  `constitution` (front door onto the machine-enforced guardrails), `5dive ui`
+  (local read-only web UI: org chart/queue/gates, DIVE-2655), `5dive acp`
+  (speaks ACP over stdio so a client like Buzz/Zed can select 5dive as a
   coding-agent runtime — spawned BY the client, not run directly, DIVE-3017),
   `liveness` (is a seat alive against an artifact it WROTE, DIVE-3778),
   `plugin` (install/enable/rollback plugins + marketplaces), `human`
