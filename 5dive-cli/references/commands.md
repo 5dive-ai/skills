@@ -21,7 +21,7 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
                                      #   Read is unprivileged, the write needs root. NOT the same verb as
                                      #   `agent config <name> set ...`, which is per-seat
 5dive task       ...                 # host-shared task queue (no sudo)
-5dive project    add|ls|show         # ident namespaces for the queue (no sudo)
+5dive project    add|ls|show|set-status   # ident namespaces for the queue (no sudo)
 5dive goal       add "<outcome>"     # outcome -> validated, guardrailed task DAG
 5dive objective  ...                 # standing target bound to a live metric, self-steers via replan
 5dive council    ...                 # standalone deliberation council (governance votes, sudo for writes)
@@ -55,6 +55,12 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
 5dive ui         [--port=8735] [--host=127.0.0.1]    # local web UI: org chart, queue, gates (read-only, no sign-in)
 5dive acp                            # speak ACP over stdio, spawned BY a client (Buzz, Zed) — not interactive
 5dive watch [--interval=N]           # htop-style live view (interactive TTY)
+5dive wall [--grid=CxR] [--rebuild] [<seat>...]   # DIVE-4614: EVERY running claude seat's live TUI
+                                     #   tiled into one read-only tmux session. C-b w opts ONE pane
+                                     #   writable, C-b r back, C-b d detach. Grid defaults to 3 wide,
+                                     #   is remembered per box (root), and is REFUSED if it holds
+                                     #   fewer panes than seats. Needs root or a per-seat runas grant;
+                                     #   an unreachable seat prints NOT PERMITTED in its own pane
 5dive doctor  [--fix] [--dry-run] [--category=deps|types|auth|creds|registry|shelld|channels|host|memory]
 5dive selfcheck [--json] [--only=<probe,...>] [--full] [--assume-clean] [--strict] [--allow=<probe,...>] [--report=<file>] [--label=<env>] [--list]
 5dive models    [--json]             # current Claude model id per alias (opus/sonnet/fable/haiku)
@@ -101,6 +107,11 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                                                   # (sudoers for _push_do); refused on --isolation=
                                                                   # sandboxed, no-op+warn on --isolation=admin (already
                                                                   # covered by its broad sudo)
+5dive agent grant <name> root         # DIVE-4557, root: CONFER unrestricted root (any command, any
+                                     #   user) on a seat of ANY tier — wider than `admin`, which is the
+                                     #   5dive CLI as root only. Managed, visudo-checked drop-in; stamps
+                                     #   the seat `beyond-admin` so `agent info` agrees; audited.
+                                     #   NO REVOKE VERB YET — one-way.
 5dive agent grant <name> <merge|push|deploy>  # since 0.32.0 (DIVE-4183), root: re-render an existing
                                              # STANDARD seat's managed sudoers from the current template so
                                              # it gains a capability added AFTER it was created. Idempotent;
@@ -335,6 +346,21 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>]
                [--no-verify] [--verify]      # skip / DEMAND a grader for this row, over the box default
                [--branch=<name>]              # seed a 'Branch: <name>' delegated-push binding (DIVE-1697)
+               [--review=none|check|rubric|temp|<seat>]   # DIVE-4324: WHO GRADES THIS ROW, picked at
+                                             #   filing time. none = `task done` closes it outright.
+                                             #   check = a command grades it (needs --verify AND --mutant);
+                                             #   rubric = one fixed six-question pass over the bounded claim
+                                             #   packet, escalated to temp by any flag, blast-radius path or
+                                             #   --verify; temp = one fresh pool session per delivery;
+                                             #   <seat> = a pinned standing reviewer. Printed back with its
+                                             #   cost on the `created DIVE-N` line
+               [--mutant=<cmd>]              # DIVE-4623: REQUIRED by --review=check — the command that BREAKS
+                                             #   the delivered tree (`git apply -R fix.patch`). At delivery both
+                                             #   arms run from a clean checkout at the delivered sha: the check
+                                             #   must PASS as delivered and FAIL after the mutant. A check that
+                                             #   survives it is vacuous and the delivery is REFUSED, with no
+                                             #   grader session booked
+               [--no-mutant=<reason>]        # the audited escape for a check that cannot be inverted
                [--customer]                   # the row is customer-facing
                [--already-blocked=<what it blocked>]   # the AUDITED escape from the internal-filing cap:
                                              #   use it when the defect ALREADY blocked shipped work,
@@ -351,6 +377,9 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              #   regardless (DIVE-2055)
 5dive task show <id|DIVE-N>                  # detail + subtasks + blockers
 5dive task assign <id|DIVE-N> <agent>
+5dive task grade-context <id|DIVE-N> [--check=<path>]   # materialize/check the PRIVATE detached grading
+                                             #   worktree and print the bounded grading packet. Grade from
+                                             #   this, never from a shared checkout
 5dive task verifier <id|DIVE-N> <agent> [--accept=<criteria>] [--max-iters=<n>]
                                              # DIVE-1880: attach the maker→verifier rail to an
                                              # already-filed task (grader must ≠ maker). One-way —
@@ -392,7 +421,14 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              # merge gate holds at `no-graded-sha-stated`, and a sha that is not
                                              # the PR head holds at `graded-sha-is-not-the-head` (DIVE-2656).
                                              # --no-graded-sha is the audited escape, not the normal path
-5dive task deliver <id|DIVE-N> --pr=<url> [--result=<text>]
+5dive task deliver <id|DIVE-N> --pr=<url> [--result=<text>] [--verify=<cmd>]
+                                             # DIVE-4576: the result must NAME ITS EVIDENCE —
+                                             #   CHANGED / CHECKED (each command + pass/fail counts) /
+                                             #   DELIVERED-SHA / CI / CRITERIA — so the grader RE-RUNS what
+                                             #   you named instead of re-deriving it. `task show` prints the
+                                             #   template. --force-unevidenced="<why>" is the audited exit.
+                                             #   --verify=<cmd> grades the row with a COMMAND at delivery and
+                                             #   books no grader session
                                              # DIVE-1830: maker records the delivery PR + hands off to the
                                              # verifier; 'task done' now stays BLOCKED until that PR is
                                              # MERGED and green (see merge-gate note below)
@@ -465,6 +501,13 @@ per delivery, so the default is a spend decision the box owner makes:
 ```
 5dive config                                  # show this box's settings
 5dive config verify=always|delivered-only|never   # root; per box, not per agent
+5dive config verify-small=<lines>                 # DIVE-4559: a delivery UNDER this many changed lines
+                                                  #   that touches nothing in the blast radius (scheduler,
+                                                  #   task store, credentials, deploy, shared libs, sudo
+                                                  #   policy, systemd, schema, provisioning) closes at
+                                                  #   delivery with no grader booked, and says so.
+                                                  #   --verify on the row beats it; --no-verify never
+                                                  #   beats the opposite, delivery-time UPGRADE
 ```
 
 - `always` — every standard row is graded. **Our own fleet is `always`,** and a
@@ -674,6 +717,7 @@ call it. `--from` defaults to your `agent-*` name (or `SUDO_USER` under sudo).
                         [--folder=<path>] [--lead-agent=<agent>]   # prefix defaults to upper(key)
 5dive project ls
 5dive project show <key>                     # detail + the task_deps graph (topological layers, critical path)
+5dive project set-status <key> <status>      # DIVE-4680: active | complete | archived | binned | backlogged
 ```
 
 Tasks filed with `--project=<key>` number per project (`FROG-1`, `FROG-2`, …).

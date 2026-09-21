@@ -251,6 +251,12 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 # On a row that carries a verifier, the maker DELIVERS instead of closing;
 # the verifier passes (`verify`) or bounces it back (`reject`).
 5dive task deliver DIVE-7 --pr=<url> --result="..." --json
+# the result must NAME ITS EVIDENCE (DIVE-4576) — CHANGED / CHECKED (each command
+# with its pass/fail counts) / DELIVERED-SHA / CI / CRITERIA — so the grader
+# re-runs what you name instead of re-deriving it. `task show` prints the
+# template; `--force-unevidenced="<why>"` is the audited exit.
+5dive task deliver DIVE-7 --pr=<url> --verify="bash tests/x_unit.sh" --json
+# ^ grade this row with a COMMAND at delivery: no grader session is booked.
 # since 0.32.0 (DIVE-4144): --feedback is REQUIRED on a reject and must name a
 # FIX, not only a finding. --no-fix="<why>" is the audited escape.
 5dive task reject  DIVE-7 --feedback="FINDING: x / FIX: do y / VERIFY: run z" --json
@@ -283,6 +289,17 @@ holds at `no-graded-sha-stated`; a sha that is not the PR head holds at
 `graded-sha-is-not-the-head` (DIVE-2656). `--no-graded-sha` is the audited
 escape, not the normal path.
 
+**A small delivery closes without booking a grader (DIVE-4559).** On a box
+running `5dive config verify-small=<lines>`, a PR under that many changed lines
+that touches nothing in the blast radius (scheduler, task store, credentials,
+deploy, shared libs, sudo policy, systemd, schema, provisioning) closes at
+delivery and says so. `--verify` on the row beats it; `--no-verify` never beats
+the opposite, delivery-time UPGRADE.
+
+**The verifier's own read is bounded**: `5dive task grade-context <id>`
+materializes the private detached grading worktree and prints the grading
+packet — grade from that, never from a shared checkout.
+
 On `done`/`cancel`, `--result`'s **first line** is what gets pinged to the
 owner's phone — lead with a terse one-line summary, detail after the first
 newline.
@@ -295,16 +312,29 @@ instead of letting the default pick one for you:
 | `--review=` | who grades it | cost |
 |---|---|---|
 | `none` | nobody — `task done` closes it outright | no session |
-| `check` | a command does (pass `--verify="<cmd>"` too) | no session |
+| `check` | a command does (needs `--verify="<cmd>"` **and** `--mutant="<cmd>"`) | no session |
+| `rubric` | one fixed six-question pass over the bounded claim packet | no session |
 | `temp` | one fresh pool session per delivery, then gone | one session |
 | `<seat>` | a pinned standing reviewer, in its own session | one session |
 
 ```bash
 5dive task add "bump the pinned version in three manifests" --review=none
-5dive task add "add the retry arm" --review=check --verify="bash tests/retry_unit.sh"
+5dive task add "add the retry arm" --review=check \
+  --verify="bash tests/retry_unit.sh" --mutant="git apply -R fix.patch"
 5dive task add "rework the claim path" --review=temp
 5dive task add "new pricing tile" --review=quinn --customer
 ```
+
+**`--review=check` owes a negative control (DIVE-4623).** `--mutant=<cmd>` is the
+command that BREAKS the delivered tree (`git apply -R <fix>.patch`,
+`sed -i s/<new guard>/xx/ src/foo.sh`). At delivery both arms run from a clean
+checkout at the delivered sha: the check must PASS as delivered and FAIL after
+the mutant. A check that survives its mutant would grade every tree green, so
+the delivery is REFUSED with that as the finding — without booking a grader
+session. `--no-mutant="<reason>"` is the audited escape for a check that
+genuinely cannot be inverted (an environment probe, a live-box reachability
+test). `rubric` escalates to `temp` the moment the row carries a flag, a
+blast-radius path or a `--verify`.
 
 Pass nothing and the row still gets a mode — printed back with its cost on the
 `created DIVE-N` line, and shown by `task ls` / `task show`: `none` for a
@@ -498,6 +528,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.39.0** (tag `e68f734c`, 2026-09-14). A given box's
+_Synced to 5dive CLI **0.47.0** (commit `4704e3ad`, 2026-09-21). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
