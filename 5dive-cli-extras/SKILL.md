@@ -2,7 +2,8 @@
 name: 5dive-cli-extras
 description: >-
   Administer the local 5dive runtime beyond everyday delegation: accounts and
-  auth recovery, declarative fleets and remote boxes, loops and goal DAGs,
+  auth recovery, declarative fleets and remote boxes, every seat's live screen
+  at once, loops and goal DAGs,
   governance, memory and wiki writes, plugins and host remediation. Use when
   runtime administration itself is the task; `5dive-cli` already covers
   spawning agents, messaging them and the shared task queue.
@@ -21,7 +22,9 @@ the basic task queue. This skill is the administration surface on top of it:
   `--defer-auth`, device-code login via `agent auth start/poll/submit`),
   BYO-provider agents (`--provider`), multi-account auth (`5dive account`).
 - **Fleets and hosts** — declarative fleets and company templates
-  (`5dive up/down/ps/export`, `team import`), agents on other registered boxes
+  (`5dive up/down/ps/export`, `team import`, roster-wide `--type=<harness>`),
+  every seat's live TUI on one screen (`5dive wall`), widening an existing
+  seat's grants (`agent grant`), agents on other registered boxes
   (`5dive fleet`), hosting a CrewAI crew (`5dive crew`), hardened host
   remediation (`5dive host`), the onboarding wizard (`5dive company`).
 - **Recurring and structured work** — `task add --recurring`,
@@ -278,6 +281,25 @@ seeing it, post directly in that chat via your own Telegram/Discord tool
 instead of replying back to the sender. If the target agent's bot is **not**
 in the chat, relay the reply yourself and tell the user the bot needs adding.
 
+### Widen an existing seat's grants: `agent grant`
+
+A capability added to the sudoers template after a seat was created does not
+reach it retroactively. Re-render that seat's managed policy:
+
+```bash
+sudo 5dive agent grant dev merge      # also: push | deploy — re-render a STANDARD
+                                      # seat's managed sudoers from the template.
+                                      # Idempotent; refuses any policy this CLI
+                                      # did not write.
+sudo 5dive agent grant dev root       # CONFER unrestricted root (any command, any
+                                      # user) on a seat of any tier — wider than
+                                      # `admin`, which is the 5dive CLI as root only.
+```
+
+`grant root` writes a managed, visudo-checked drop-in, stamps the seat
+`beyond-admin` so `agent info` stops disagreeing with the grant, and audits it.
+**There is no revoke verb yet** — treat it as one-way.
+
 ## Declarative fleets: compose + team templates
 
 For more than a couple of agents, declare the fleet in `5dive.yaml`:
@@ -290,6 +312,14 @@ sudo 5dive export     # dump the LIVE fleet to a v2 5dive.yaml
 
 sudo 5dive team ls
 sudo 5dive team import startup --json   # bundled multi-agent company template
+
+# every bundled template says `type: claude`. --type puts the WHOLE roster on
+# one harness instead — the parsed spec is rewritten, so the create argv, the
+# persona target and `ps` all agree. It overrides a per-agent `type:` too, and
+# reaches the character-pack import path. Claude-only model aliases are dropped
+# (and the affected agents printed) when the target is not claude.
+sudo 5dive team import startup --type=codex --json
+sudo 5dive up --type=codex ; sudo 5dive ps --type=codex
 ```
 
 Spec keys per agent: `type, channels, telegram_token, discord_token,
@@ -319,6 +349,9 @@ named task workspace with its own ident prefix and an optional lead:
   --lead-agent=worker-1 --json          # prefix defaults to the upper-cased key
 5dive project ls --json                 # key, prefix, task count, lead, status
 5dive project show frog --json
+
+# move a project through its lifecycle:
+5dive project set-status frog complete   # active | complete | archived | binned | backlogged
 
 5dive task add "port the lexer" --project=frog --assignee=worker-1 --json
 5dive task ls --project=frog --json
@@ -842,6 +875,35 @@ These exist so an admin agent can fix a sick host **under the CLI-root grant it
 already holds**, instead of needing `NOPASSWD:ALL`. Run `sudo 5dive host --help`
 for the current verb set — it is the narrowest surface here and moves most.
 
+## Every agent on one screen: `5dive wall` (DIVE-4614)
+
+`5dive watch` is a list of seats; **`5dive wall` is the seats themselves** —
+every running `claude` agent's live TUI tiled into one tmux session,
+**read-only by default**.
+
+```bash
+sudo 5dive wall                  # every running claude seat, in registry order
+sudo 5dive wall main dev ops     # only these seats, in this order
+sudo 5dive wall --grid=4x2       # a different shape; remembered per box (needs root)
+sudo 5dive wall --rebuild        # tear the layout down and lay it out again
+```
+
+Inside: `C-b d` detach (agents keep running) · `C-b z` zoom a pane ·
+`C-b w` make THIS pane writable · `C-b r` back to read-only · `C-b ←→` move.
+
+Read-only is a safety property, not a default: a stray `Ctrl-C` into an agent
+pane kills that seat's unit, so `C-b w` opts **one** pane in, never the wall.
+The grid defaults to 3 columns (the readable ceiling for a Claude TUI) with as
+many rows as the roster needs, and a `--grid=` holding fewer panes than there
+are seats is refused — a seat you cannot see is the failure the wall exists to
+prevent. Spare slots stay as vacant panes so the layout does not move when a
+seat is down.
+
+A pane reaches a seat's tmux socket only as that seat's user, so the caller
+must be root or hold a runas grant. Without it the wall prints NOT PERMITTED
+per pane and refuses up front if no seat is reachable — it never renders a
+permissions problem as a dead fleet.
+
 ## Control other boxes: `5dive fleet`
 
 A fleet registry maps box names to SSH targets (references only — never key
@@ -890,6 +952,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.39.0** (tag `e68f734c`, 2026-09-14). A given box's
+_Synced to 5dive CLI **0.47.0** (commit `4704e3ad`, 2026-09-21). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
