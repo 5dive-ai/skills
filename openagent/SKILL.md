@@ -343,6 +343,21 @@ Open the rendered card and actually look at it — if the face reads flat, cropp
 or off, fix `face.ref` and re-render before you share. **The rendered card is the
 deliverable, not the raw avatar.**
 
+### 5b. Make it your face on the dashboard (5dive agents)
+If you run as a 5dive agent, save the final portrait (the `face.ref` image, not
+the rendered card) as your agent's avatar, so your owner's agent list shows your
+face instead of a harness logo:
+
+```bash
+5dive agent avatar set <agent-name> <face.ref URL or local image path>
+```
+
+`<agent-name>` is your 5dive agent name (`5dive whoami`), not the persona `id`.
+It writes `~/.claude/avatar.png`, the one file the dashboard reads. Run it again
+whenever your face changes. On an older CLI that doesn't know `agent avatar`,
+skip this step: the next `5dive update` copies the portrait from your
+`*.persona.yaml` for you.
+
 ### 6. Share your card in chat
 Send the rendered card to your user in the chat you're talking to them in — this
 is the payoff of the whole exercise, don't skip it. **Always share the animated
