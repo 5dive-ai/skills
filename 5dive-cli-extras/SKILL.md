@@ -37,7 +37,7 @@ the basic task queue. This skill is the administration surface on top of it:
 - **Knowledge and org** — compiling durable knowledge into the shared wiki
   (`5dive memory add`), two-stage recall on a large store
   (`memory search --index` + `memory get`), org-chart writes (`5dive org set`),
-  governance votes (`5dive council`).
+  governance votes (`5dive council`, a plugin since it left core).
 - **Health and history** — fleet health, token burn and the daily standup
   (`5dive supervisor`, `5dive usage`, `5dive digest`), machine-readable health
   checks (`5dive doctor --json`, `5dive selfcheck --json`), a task's causal
@@ -550,11 +550,18 @@ validated like a `goal add` plan:
 `--yes` waives only the count-over-checkpoint gate — a Tier-2 task in the
 diff still hard-gates. Always `--dry-run` a replan first.
 
-## Governance votes: `5dive council`
+## Governance votes: `5dive council` (a PLUGIN, no longer core)
 
-For decisions that should be a recorded vote rather than one agent's call —
-membership motions, constitutional amendments, or routing an open gate to a
-deliberation:
+`council` moved out of the core CLI. On a box without it, `5dive council`
+prints the move note and the one-line fix rather than a verb error:
+
+```bash
+5dive plugin add 5dive-ai/5dive-council   # then '5dive council' works exactly as before
+```
+
+Everything below is unchanged once it is installed. For decisions that should
+be a recorded vote rather than one agent's call — membership motions,
+constitutional amendments, or routing an open gate to a deliberation:
 
 ```bash
 5dive council convene "<question>" [--seats=a,b,c] [--mode=quick|deliberate|adversarial]
@@ -863,6 +870,53 @@ sudo 5dive agent buzz enable <name> --relay=https://…  [--channels=<csv>] [--p
 of reachability. `--rotate-key` mints a NEW identity and the handset must
 re-pair.
 
+## Owner asks: `5dive owner-ask` (DIVE-4982)
+
+A browser step only the box OWNER may allow — a purchase, a login, anything
+the seat must not self-approve. The browser plugin writes the request; this
+verb is how it reaches a person and how the tap comes back:
+
+```bash
+5dive owner-ask browser <request-file>          # send the ask to the owner: payload,
+                                                # screenshot, Approve / Decline buttons
+sudo 5dive owner-ask tap <bap|bdn>:<12hex>:<32hex> --tap-uid=<telegram user id>
+```
+
+The request file is `<seat home>/.5dive/browser-approvals/<seat>-<12 hex>.json`.
+`browser` writes the proof's sha256 into the request as root; with no route to
+the owner it sends NOTHING and says why, exiting 0 — silence is reported, not
+faked. `tap` is root-only (the team-bot listener runs it): it applies the
+owner's answer through `5dive browser approve` and wakes the seat, and any
+tapper who is not the owner is refused.
+
+## Decision receipts: `5dive reflex` (DIVE-4866)
+
+Read-only instrumentation on the decision points the CLI already makes —
+receipts now, and an offline replay of a candidate model backend against them.
+**Nothing here changes behaviour.** Policies: `task-route`, `retry-action`,
+`stuck`, `gate-answer`.
+
+```bash
+5dive reflex status [--probe] [--json]      # receipts on/off, 24h decisions, endpoint, model
+5dive reflex log [--policy=<p>] [--limit=N] [--json]
+5dive reflex replay [--since=14d] [--policy=<p>] [--backend=fake:echo|fake:first|fake:recommend|<cmd>]
+                    [--inputs=none|titles] [--timeout=<s>] [--dump=<file>] [--json]
+5dive reflex fake [--strategy=echo|first|recommend]   # JSONL stdin -> stdout
+5dive reflex report --live [--policy=gate-answer] [--since=7d] [--json]
+```
+
+`--inputs=titles` lets a replay carry task titles, gate asks/options and seat
+roles — never a body; the default sends ids and labels only. Receipts are
+written by the decision points themselves, so stopping them is config, not a
+flag: `5dive config reflex-receipts=off` (`FIVEDIVE_REFLEX_RECEIPTS=0` in the
+environment wins over that). `report --live` scores the gate-answer SHADOW
+(DIVE-4916) — the configured model's pick on each new gate, recorded and never
+acted on — against the answer the gate actually got, by confidence band; it
+runs only on a box that set `reflex-model=` and holds the key, or a custom
+`reflex-endpoint=`. The two browser drafters, `login-marker` (DIVE-4928) and
+`pick-ref` (DIVE-4929), are shadow too: the code lists and verifies the
+candidates, the model only picks one, and nothing is written to an adapter.
+
 ## Hardened host remediation: `5dive host`
 
 ```bash
@@ -952,6 +1006,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.47.0** (commit `4704e3ad`, 2026-09-21). A given box's
+_Synced to 5dive CLI **0.59.0** (commit `a134f8ce`, 2026-09-28). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

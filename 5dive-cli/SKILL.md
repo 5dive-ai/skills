@@ -213,18 +213,24 @@ is **also** a member, don't relay the answer yourself — hand it off with
 `<channel>` tag's `chat_id`/`message_id`) so the target agent posts directly
 via its own bot. See `5dive-cli-extras` for the full chat-delegation walkthrough.
 
-### Read the agent-to-agent ledger: `5dive a2a`
+### Read the agent-to-agent ledger: `5dive agent rounds`
 
-The A2A ledger is a read-only traffic summary; it records who exchanged
+The a2a ledger is a read-only traffic summary; it records who exchanged
 messages on which rows, but never stores message text:
 
 ```bash
-5dive a2a rounds --json
-5dive a2a rounds --agent=scout --window=24 --json
+5dive agent rounds
+5dive agent rounds --json
+5dive agent rounds --agent=scout --window=24 --json
 ```
 
-The default window is 24 hours. An unreadable ledger reports `UNKNOWN` and
-exits 3 rather than rendering the fleet as idle.
+The default window is 24 hours (the ledger's retention). An unreadable ledger
+reports `UNKNOWN` and exits 3 rather than rendering the fleet as idle.
+
+**Renamed in DIVE-5070**: this was `5dive a2a rounds`. The top-level `a2a`
+verb no longer exists in core (`unknown command: a2a`) — the name now belongs
+to the a2a plugin (`5dive plugin add 5dive-ai/5dive-a2a`). The ledger reader
+itself stayed in core under `agent`.
 
 ### Track shared work: the task queue + org chart
 
@@ -504,8 +510,7 @@ routing decision without running anything.
 - `references/commands.md` — every subcommand and flag, copy/pasteable.
   Includes the less-frequent top-level verbs not recapped above: `5dive deploy`
   (delegated production deploy, INST-5), `5dive bug` (diagnostic issue filing),
-  `constitution` (front door onto the machine-enforced guardrails), `5dive ui`
-  (local read-only web UI: org chart/queue/gates, DIVE-2655), `5dive acp`
+  `constitution` (front door onto the machine-enforced guardrails), `5dive acp`
   (speaks ACP over stdio so a client like Buzz/Zed can select 5dive as a
   coding-agent runtime — spawned BY the client, not run directly, DIVE-3017),
   `liveness` (is a seat alive against an artifact it WROTE, DIVE-3778),
@@ -514,6 +519,13 @@ routing decision without running anything.
   agent at one task — the unit beneath `trace`), `trigger` (signed external
   events become ordinary tasks) and `host` (hardened unit/journal/cron
   remediation under the CLI-root grant).
+- **The web UI left core and is a plugin now.** `5dive plugin add
+  5dive-ai/5dive-ui` installs it, and `5dive ui` then works as before. What
+  stayed in core is the read contract the views render:
+  `5dive board [--json]` emits this host's org/queue/gates/flows/triggers as
+  ONE versioned JSON document, so a consumer never opens core's private sqlite
+  store (DIVE-4779). `5dive board --contract-version` reads no store at all,
+  which is how you negotiate against a box whose board does not exist yet.
 - `references/exit-codes.md` — exit codes & error classes.
 - `references/paths.md` — on-disk state layout (only for debugging).
 - `5dive-cli-extras` skill — crew hosting, accounts, auth recovery, compose/
@@ -528,6 +540,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.47.0** (commit `4704e3ad`, 2026-09-21). A given box's
+_Synced to 5dive CLI **0.59.0** (commit `a134f8ce`, 2026-09-28). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
