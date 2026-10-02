@@ -442,6 +442,35 @@ the answer is X" and "this cannot wait" are separate claims. See
 `5dive-cli-extras` for `task park`/`escalate`/`clear-recs`/`need --withdraw`,
 the `--type=access` + `--probe` self-check, and precedent prefill.
 
+### Ask your owner for a key: the secure link, never chat (DIVE-5370)
+
+**Anything that can spend money or open an account goes through a secret gate's
+one-time link, never chat:** paid API keys (ElevenLabs, fal, OpenAI…), passwords,
+account tokens (GitHub, Vercel, Stripe, Cloudflare, Meta) and 2FA seeds. Asking
+for one in chat leaves it in the chat history for good.
+
+```bash
+5dive task add "Connect ElevenLabs for voice clips" --json   # no task yet? file one first
+5dive task need DIVE-12 --type=secret \
+  --secret-key=ELEVENLABS_API_KEY --connector=tools \
+  --ask="Paste your ElevenLabs API key so I can make voice clips"
+# -> the owner gets a one-time link (admin seat: the box serves it; standard
+#    seat: the Telegram Mini App's "Open secure link" card). They paste, the gate
+#    clears, and you are pinged.
+echo "${ELEVENLABS_API_KEY:+set}"   # from your next command, the key is in your env
+```
+
+**Use `--connector=tools`.** It writes `/etc/5dive/connectors/tools.sh`, the file
+every agent's commands load (`BASH_ENV`), the same store the Mini App's
+Settings → Tools screen fills. Every other `--connector` writes a root-only
+`<name>.env` that an agent seat cannot read. The value must be one line with no
+spaces or quotes. (`--connector=tools` needs the CLI that ships `5dive tool`;
+on an older box the key lands root-only.)
+
+**A throwaway key may come by chat:** a free-tier or test key, one the owner says
+is disposable, or a value that isn't secret. When unsure, use the link. Never
+echo, log or commit a key either way.
+
 ### Search team memory before re-deriving
 
 ```bash

@@ -43,6 +43,11 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
 5dive secret write <KEY> --connector=<name> [--task=<DIVE-N>]   # root-only credential drop, value on stdin
                                                # (--task clears that task's pending secret gate on a
                                                # confirmed write — the secure-drop path)
+                                               # --connector=tools lands it in every agent's env (tools.sh)
+5dive secret link <DIVE-N> [--ttl=<minutes>]   # root-only: mint a one-time https link for an open secret
+                                               # gate; the owner pastes there, the gate clears (30 min default)
+5dive tool ls [--json] | set <tool> | rm <tool>   # keys every agent sees as env vars (GH_TOKEN, FAL_KEY…);
+                                               # set/rm root-only, values on stdin. The Mini App's Tools screen
 5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
 5dive proof      ...                 # zero-human autonomy badge publisher (on/off/status/scorecard/publish/tick)
 5dive trace      <id|DIVE-N> [--json] [--no-audit]   # read-only origin/lifecycle/gate-provenance for one task
