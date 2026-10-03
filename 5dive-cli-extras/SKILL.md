@@ -231,6 +231,11 @@ root-only drop primitive:
 echo -n "$TOKEN" | sudo 5dive secret write OPENAI_API_KEY --connector=openai
 ```
 
+That is for a value you already hold. To get a key FROM the owner, file a
+secret gate with `--connector=tools` so they paste it through a one-time link
+and every agent sees it as an env var. Never ask for it in chat. The core
+skill's "Ask your owner for a key" recipe covers this.
+
 Who may talk to the bot is governed by `access.json` (no restart needed —
 the plugin re-reads per message):
 
