@@ -467,6 +467,12 @@ Settings → Tools screen fills. Every other `--connector` writes a root-only
 spaces or quotes. (`--connector=tools` needs the CLI that ships `5dive tool`;
 on an older box the key lands root-only.)
 
+**The owner is waiting in this chat and the alert has no link?** `task need` warns
+"no secure link in this alert" when the box could not make one. An admin seat can
+mint it itself: `sudo 5dive secret link DIVE-12` prints the same one-time link.
+Send that LINK in your reply (never ask for the key itself). A standard seat
+cannot: point the owner to the "Open secure link" card in the Telegram Mini App.
+
 **A throwaway key may come by chat:** a free-tier or test key, one the owner says
 is disposable, or a value that isn't secret. When unsure, use the link. Never
 echo, log or commit a key either way.
