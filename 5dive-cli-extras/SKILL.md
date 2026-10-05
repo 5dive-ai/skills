@@ -999,8 +999,8 @@ printf '%s\n' "$GH_TOKEN" | sudo 5dive tool set github
 sudo 5dive tool rm github
 # `5dive tool help` lists every tool and the variables it fills
 # (github, vercel, stripe, cloudflare, meta, elevenlabs, fal, higgsfield,
-#  bitrix24, amocrm, moysklad, yandex-calendar, hubspot, pipedrive, notion,
-#  asana, calendly, lexoffice, sevdesk, holded).
+#  bitrix24, amocrm, hubspot, pipedrive, notion, asana, calendly, lexoffice,
+#  sevdesk, holded). Any other app: `tool set <id> --env="APP_LOGIN APP_TOKEN"`.
 
 # Hire: a standard seat sends its human a one-tap link; an admin seat hires
 # itself with `sudo 5dive agent import <slug> --as=<name>`. Slugs: 5dive market.
