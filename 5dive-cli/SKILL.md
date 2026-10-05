@@ -553,7 +553,13 @@ routing decision without running anything.
   (the people who can CLEAR a gate, DIVE-3342), `run` (one attempt by one
   agent at one task — the unit beneath `trace`), `trigger` (signed external
   events become ordinary tasks) and `host` (hardened unit/journal/cron
-  remediation under the CLI-root grant).
+  remediation under the CLI-root grant, plus `host timezone`). The no-root
+  verbs for a standard seat — `5dive route` (publish an app on a port),
+  `5dive pkg install` (apt package, install only), `5dive tool` (tool keys),
+  `5dive hire-link` (one-tap hire link for your human) and, on a partner box,
+  `5dive partner hire` — plus the owner surfaces `5dive telegram-app link`
+  (Mini App sign-in) and `5dive disk sweep|alarm|tick` (safe cache sweep +
+  low-disk alarm) are covered in `5dive-cli-extras`.
 - **The web UI left core and is a plugin now.** `5dive plugin add
   5dive-ai/5dive-ui` installs it, and `5dive ui` then works as before. What
   stayed in core is the read contract the views render:
@@ -575,6 +581,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.59.0** (commit `a134f8ce`, 2026-09-28). A given box's
+_Synced to 5dive CLI **0.73.1** (commit `46fe77b3`, 2026-10-05). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

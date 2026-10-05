@@ -145,6 +145,23 @@ sudo 5dive agent config worker-1 set effort=high
 # effort: low|medium|high|xhigh|max — claude only; xhigh/max are Opus-tier.
 ```
 
+Move a seat between harnesses **in place** (DIVE-5501): same name, unix user,
+bot, tasks and grants; memory and instructions are converted, and the old
+side's files are kept so switching back is instant.
+
+```bash
+sudo 5dive agent switch worker-1 --to=codex [--account=<account|default>]
+sudo 5dive agent switch worker-1 --to=claude --no-handoff   # skip the handoff note
+```
+
+A hired (pack) agent picks up its pack's later skill, persona.yaml and CLAUDE.md
+fixes with `pack-sync` (DIVE-5205, DIVE-5211) — `--dry-run` first:
+
+```bash
+sudo 5dive agent pack-sync worker-1 --dry-run
+sudo 5dive agent pack-sync --all [--no-restart]
+```
+
 ### Recover from `auth_required`
 
 ```bash
@@ -183,6 +200,11 @@ sudo 5dive agent set-account worker-1 default --json     # clear the override
 sudo 5dive account rename acme-prod acme-staging --json  # remove refuses while bound
 sudo 5dive account remove acme-staging --json
 sudo 5dive account set-active-provider acme-prod hermes openrouter --json  # hermes-only
+
+# Move an alias-mapping account (e.g. the seeded OpenRouter one) to another
+# model WITHOUT re-entering its key; re-pins its agents, restarts them when
+# idle (DIVE-5259). A standard seat may switch its own account (DIVE-5367).
+sudo 5dive account set-model acme-prod --model=<slug>
 ```
 
 The reserved name `default` is rejected by `account add`/`rename` — at the
@@ -366,6 +388,14 @@ Everything else — `start`/`done`/`need`/`block`/`loop`/`heartbeat` — works
 identically on a project's tasks.
 
 ## Task queue extras: park, escalate, bulk-clear, org writes
+
+**Owner follow-ups: `task followup`.** The owner's follow-up on a row is
+recorded in its body and sent to the assignee in one verb (DIVE-5507) — never
+append to the body and a2a separately:
+
+```bash
+5dive task followup DIVE-123 --text="also cover the empty-list case" [--from=<who>]
+```
 
 **Quiet waits: `task park`.** Sleep a task without putting it in the human
 inbox:
@@ -934,6 +964,68 @@ These exist so an admin agent can fix a sick host **under the CLI-root grant it
 already holds**, instead of needing `NOPASSWD:ALL`. Run `sudo 5dive host --help`
 for the current verb set — it is the narrowest surface here and moves most.
 
+`5dive host timezone` reads the box's zone; `sudo 5dive host timezone set
+<IANA zone> [--no-restart]` changes it and restarts cron and every running
+agent so they pick it up (DIVE-5165 — a partner client's box runs in the
+client's clock). A no-op when the zone already matches.
+
+`5dive sysadmin` (privileged work on a PARTNER box, each change behind the
+owner's tap) **left core** for the partner plugin (DIVE-5247); core's help
+only points at it.
+
+## Work without root: publish an app, add a package, use a tool key, hire
+
+A standard or sandboxed seat (no sudo) has its own narrow verbs for the four
+things it used to ask root for (DIVE-5396). Each refuses rather than widens.
+
+```bash
+# Publish an app you already run on 127.0.0.1:<port>. Refused for a port
+# nothing is listening on — start the app first.
+5dive route add myapp --port=3000      # https://myapp.<box-domain>/
+5dive route add /myapp --port=3000     # https://<box-domain>/myapp/ (app sees paths from /)
+5dive route ls --json
+5dive route rm myapp
+
+# A system package from the box's apt repos. Install only, names only (no
+# flags, versions, files or URLs), nothing is ever removed. For a CLI tool
+# prefer your own no-sudo install: npm i -g / pip install / uv tool install.
+5dive pkg install ffmpeg --json
+
+# Tool keys every agent's commands see as env vars, from their next command
+# on (DIVE-5366; business apps DIVE-5513). ls never prints a key; set/rm are
+# root-only and read values on STDIN, one line per field.
+5dive tool ls --json
+printf '%s\n' "$GH_TOKEN" | sudo 5dive tool set github
+sudo 5dive tool rm github
+# `5dive tool help` lists every tool and the variables it fills
+# (github, vercel, stripe, cloudflare, meta, elevenlabs, fal, higgsfield,
+#  bitrix24, amocrm, moysklad, yandex-calendar, hubspot, pipedrive, notion,
+#  asana, calendly, lexoffice, sevdesk, holded).
+
+# Hire: a standard seat sends its human a one-tap link; an admin seat hires
+# itself with `sudo 5dive agent import <slug> --as=<name>`. Slugs: 5dive market.
+5dive hire-link <slug> --json
+
+# On a PARTNER box only: hire from the partner's catalogue, same account, and
+# the new agent shows in the partner's list (DIVE-5168). No root needed.
+# Exit 4 = not in this partner's catalogue, 10 = not a partner box.
+5dive partner hire <pack> [--as=<name>] --json
+```
+
+Two box-owner surfaces round this out:
+
+- `5dive telegram-app link --telegram-id=<id> [--json]` — a one-time (15 min)
+  link that opens the 5dive Mini App in Telegram, signed into the box owner's
+  account, for that Telegram user only; the id must be in the calling seat's
+  allowlist. The telegram plugin's `/app` runs it (DIVE-5185). Off box-wide
+  with `5dive config telegram-app=off`.
+- `sudo 5dive disk sweep [--dry-run]` deletes ONLY caches a tool rebuilds on
+  its own (old Chrome temp files, npm/nvm download caches, `apt-get clean`,
+  disabled snap revisions); `5dive disk alarm` tells the owner once at <5%
+  free; `5dive disk tick` is the hourly cron driver (DIVE-5190). Never touches
+  homes, projects, agent memory, transcripts, model caches or backups. Log:
+  `/var/log/5dive/disk-sweep.log`.
+
 ## Every agent on one screen: `5dive wall` (DIVE-4614)
 
 `5dive watch` is a list of seats; **`5dive wall` is the seats themselves** —
@@ -1011,6 +1103,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.59.0** (commit `a134f8ce`, 2026-09-28). A given box's
+_Synced to 5dive CLI **0.73.1** (commit `46fe77b3`, 2026-10-05). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
