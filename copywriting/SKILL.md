@@ -11,6 +11,8 @@ metadata:
 
 # Copywriting
 
+Adapted from [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) (MIT, Corey Haines).
+
 ## Trigger phrases
 
 "write copy for", "improve this copy", "rewrite this page", "marketing copy",

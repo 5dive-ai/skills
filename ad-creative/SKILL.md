@@ -11,6 +11,8 @@ metadata:
 
 # Ad Creative
 
+Adapted from [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills) (MIT, Corey Haines).
+
 ## Trigger phrases
 
 "ad copy variations", "ad creative", "generate headlines", "RSA headlines",
