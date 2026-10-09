@@ -347,6 +347,21 @@ sudo 5dive team import startup --json   # bundled multi-agent company template
 # (and the affected agents printed) when the target is not claude.
 sudo 5dive team import startup --type=codex --json
 sudo 5dive up --type=codex ; sudo 5dive ps --type=codex
+
+# A hired team ASKS FIRST (DIVE-5729): on its first start every seeded goal and
+# loop is held behind one kickoff row for the lead, who sends the owner a short
+# plan and waits. Answer the kickoff with these, never `task done`/`cancel`
+# (both refuse while it holds work). --start-now on import keeps the old
+# start-at-once behaviour; re-importing a running team never asks again.
+5dive team plan [<lead>]                       # what is waiting for the yes
+5dive team start [<lead>] --skip=DIVE-41,DIVE-42   # release it, minus what was dropped
+5dive team decline [<lead>]                    # start none of it
+
+# One character is one agent per box (DIVE-5769): a seat whose persona is
+# already here is filled by that agent, even when he is in another team. He is
+# then in both (one memory, one chat, the new role added to his instructions).
+5dive team leave <team> <agent>                # out of one team, still in the others
+5dive team rm <team>                           # forget a team; fires nobody (`agent rm` fires)
 ```
 
 Spec keys per agent: `type, channels, telegram_token, discord_token,
@@ -408,6 +423,10 @@ inbox:
 Both `--reason` and `--wake` are REQUIRED (no block-graveyard). If you're
 actually waiting on a person, use `task need` instead; `park` also refuses
 over a task with a live `task need` gate.
+
+A row can be BORN held or parked, in the same write, so no heartbeat tick can
+start it first (DIVE-5729): `task add ... --held-by=DIVE-40` (blocked behind
+that row, freed when it closes) or `--park="<why>" --park-wake=+3d`.
 
 **`--type=access` gates** are for "I'm blocked on a permission I don't
 have" — pair with `--probe=<cmd>` (a self-check that must currently FAIL, so
@@ -511,6 +530,13 @@ the work ships as a PR, `5dive task deliver <id> --pr=<url> [--result=<text>]`
 hands off to the verifier without closing; `task done` then refuses to close
 until that PR is merged and green (`--force-merge-gate` overrides false
 positives).
+
+#### Score a loop by a number (DIVE-5777)
+
+```bash
+5dive task loop outcome <loop> --cmd="<command that prints one number>"
+5dive task loop resume <loop>   # it pauses itself after 3 days without a rise
+```
 
 #### LOOP-7: agent-native orchestration verbs
 
@@ -956,7 +982,10 @@ candidates, the model only picks one, and nothing is written to an adapter.
 
 ```bash
 sudo 5dive host unit ...      # 5dive-* unit remediation
-sudo 5dive host journal ...   # journal reads
+sudo 5dive host journal --unit=<u> | --comm=<process> | --grep=<text> \
+     [--lines=N] [--since=2h] [--count-secrets]
+                              # whole-journal search, EVERY line secret-masked;
+                              # --grep matches after masking (DIVE-5842)
 sudo 5dive host cron ...      # cron surface
 ```
 
@@ -1005,6 +1034,19 @@ sudo 5dive tool rm github
 # Hire: a standard seat sends its human a one-tap link; an admin seat hires
 # itself with `sudo 5dive agent import <slug> --as=<name>`. Slugs: 5dive market.
 5dive hire-link <slug> --json
+
+# No catalogue agent fits the need? A lead makes a CUSTOM agent from chat
+# (DIVE-5722): you write only the name and the need; the skills, role and voice
+# are picked as the Mini App picks them. Making the draft hires nothing.
+5dive hire-link --create --name=<Name> --description="<the need, in the owner's words>" --json
+# -> prints the draft and its card link; the owner taps Hire on the card.
+# An admin seat hires it itself, but ONLY on the owner's clear yes in chat:
+5dive hire-link custom-<id> --hire --json
+
+# The yes rule, both paths (DIVE-5823/5824): "I need someone to ..." is a NEED,
+# not a yes. Check `5dive market <words>` first, propose your pick, and wait.
+# "Hire dario" (a named agent) IS the go-ahead. A standing "full authority"
+# grant is not a yes for a hire.
 
 # On a PARTNER box only: hire from the partner's catalogue, same account, and
 # the new agent shows in the partner's list (DIVE-5168). No root needed.
@@ -1103,6 +1145,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.73.1** (commit `46fe77b3`, 2026-10-05). A given box's
+_Synced to 5dive CLI **0.84.0** (commit `61ea018c`, 2026-10-09). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
