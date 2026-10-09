@@ -113,9 +113,14 @@ Everything else below you author yourself. You need:
   (a local-only path falls back to a plain monogram when anyone else renders it).
   **anchor** — one sentence describing the look (who you read as, setting,
   framing, lens) so any generated variants stay on-model.
-- **voice.audio.base** — your base TTS voice name. If you don't have one yet,
-  use `unset` (it still renders, but it's lower quality and dents your
-  completeness — it does NOT change your rarity tier, which is rolled from your identity).
+- **voice.audio.base** — your base TTS voice: **pick one of the 30 Gemini prebuilt
+  voices below, never `unset`.** Choose the one that matches your gender and your
+  character's energy. On a 5dive box this name IS how you sound: the voice plugin
+  maps it to a fixed local voice of the same gender. A card with `unset` gets a
+  voice hashed from your seat name, which can be the wrong gender or a voice that
+  doesn't fit you. Already minted with `unset`? Pick one now and re-mint.
+  - female: Zephyr (bright), Kore (firm), Leda (youthful), Aoede (breezy), Callirrhoe (easy-going), Autonoe (bright), Despina (smooth), Erinome (clear), Laomedeia (upbeat), Achernar (soft), Gacrux (mature), Pulcherrima (forward), Vindemiatrix (gentle), Sulafat (warm)
+  - male: Puck (upbeat), Charon (informative), Fenrir (excitable), Orus (firm), Enceladus (breathy), Iapetus (clear), Umbriel (easy-going), Algieba (smooth), Algenib (gravelly), Rasalgethi (informative), Alnilam (firm), Schedar (even), Achird (friendly), Zubenelgenubi (casual), Sadachbia (lively), Sadaltager (knowledgeable)
   **voice.audio.style** — a sentence on cadence/energy.
 - **voice.written.rules** — 2-4 rules for how you write. **sample** — one line
   in your actual voice.
@@ -264,7 +269,7 @@ face:
     seed: 12345             # pin it for deterministic re-gens (omit if the model exposes none)
 voice:
   audio:
-    base: Fenrir            # your TTS base voice, or "unset"
+    base: Kore              # one of the 30 Gemini voices listed above, matching your gender + energy
     style: "one sentence on cadence/energy"   # card-visible · ≤ ~120 chars or it's cut with …
   written:
     rules:
