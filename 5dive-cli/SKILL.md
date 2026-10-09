@@ -285,6 +285,13 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 # dispatch, and the verb that clears each one (DIVE-3784).
 5dive task doctor --json
 
+# You promised your owner "I'll tell you when it's done" about a row another
+# seat builds: --tell-me wakes YOU once when it is done or cancelled, whoever
+# closes it (DIVE-5852). `task watch` does the same for a row already filed.
+# Opt-in only: no flag, no wake. On wake, check it is live before you ping.
+5dive task add "ship the pricing page" --assignee=dev --tell-me --json
+5dive task watch DIVE-7 --json        # --off to stop watching
+
 # Who reports to whom, at a glance:
 5dive org tree --json
 ```
@@ -460,7 +467,20 @@ for one in chat leaves it in the chat history for good.
 echo "${ELEVENLABS_API_KEY:+set}"   # from your next command, the key is in your env
 ```
 
-**Use `--connector=tools`.** It writes `/etc/5dive/connectors/tools.sh`, the file
+**A key for an app you are building goes to that app, not to `tools`:**
+`--connector=project-<app>` takes any variable name and writes `KEY=value` into
+`/home/claude/projects/<app>/.env.local` (or `.env` when there is no
+`.env.local`), as the project folder's owner (DIVE-5664). `task need` checks the
+folder exists when you file. Never take the key under a made-up name and copy it
+into the app by hand.
+
+```bash
+5dive task need DIVE-12 --type=secret \
+  --secret-key=GOOGLE_MAPS_API_KEY --connector=project-myshop \
+  --ask="Paste your Google Maps key so the shop's map can load"
+```
+
+**For a key every agent's tools use, `--connector=tools`.** It writes `/etc/5dive/connectors/tools.sh`, the file
 every agent's commands load (`BASH_ENV`), the same store the Mini App's
 Settings → Tools screen fills. Every other `--connector` writes a root-only
 `<name>.env` that an agent seat cannot read. The value must be one line with no
@@ -556,8 +576,10 @@ routing decision without running anything.
   remediation under the CLI-root grant, plus `host timezone`). The no-root
   verbs for a standard seat — `5dive route` (publish an app on a port),
   `5dive pkg install` (apt package, install only), `5dive tool` (tool keys),
-  `5dive hire-link` (one-tap hire link for your human) and, on a partner box,
-  `5dive partner hire` — plus the owner surfaces `5dive telegram-app link`
+  `5dive hire-link` (one-tap hire link for your human, or `--create` a custom
+  agent for a need no catalogue agent fits) and, on a partner box,
+  `5dive partner hire` — plus `5dive machine add|rm|ls` (attach a machine any
+  agent reaches as `ssh <name>`, DIVE-5622), plus the owner surfaces `5dive telegram-app link`
   (Mini App sign-in) and `5dive disk sweep|alarm|tick` (safe cache sweep +
   low-disk alarm) are covered in `5dive-cli-extras`.
 - **The web UI left core and is a plugin now.** `5dive plugin add
@@ -581,6 +603,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.73.1** (commit `46fe77b3`, 2026-10-05). A given box's
+_Synced to 5dive CLI **0.84.0** (commit `61ea018c`, 2026-10-09). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
