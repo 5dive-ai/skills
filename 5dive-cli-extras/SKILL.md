@@ -471,7 +471,10 @@ A recurring **template** materializes into a normal todo on schedule; the
 ```bash
 5dive task add "rotate the weekly metrics digest" \
   --recurring="0 9 * * 1" --assignee=worker-1 --json
-5dive task ls --recurring --json     # list templates
+5dive task ls --recurring --json     # list templates (each prints its zone)
+# The cron is read in the BOX's time zone (since 0.85.0, DIVE-5913); --tz=<zone>
+# picks another. Older templates stay UTC until moved:
+5dive task set-tz <template> box     # or an IANA zone: Asia/Bangkok, UTC, ...
 
 sudo 5dive heartbeat on worker-1 --every=30m   # default every=30m; fresh sends /clear per task
 sudo 5dive heartbeat ls              # enrolled agents + next wake + queued count
@@ -1028,8 +1031,14 @@ printf '%s\n' "$GH_TOKEN" | sudo 5dive tool set github
 sudo 5dive tool rm github
 # `5dive tool help` lists every tool and the variables it fills
 # (github, vercel, stripe, cloudflare, meta, elevenlabs, fal, higgsfield,
-#  bitrix24, amocrm, hubspot, pipedrive, notion, asana, calendly, lexoffice,
+#  aws, bitrix24, amocrm, hubspot, pipedrive, notion, asana, calendly, lexoffice,
 #  sevdesk, holded). Any other app: `tool set <id> --env="APP_LOGIN APP_TOKEN"`.
+# Google signs in instead of taking a key — one sign-in serves every agent
+# (DIVE-5934). Every google verb, and `rm google`, is root-only:
+sudo 5dive tool google start                 # -> {session, state}
+sudo 5dive tool google poll <session>        # state, the url to open, account when done
+printf '%s\n' "$CODE" | sudo 5dive tool google submit <session>   # the code Google shows
+sudo 5dive tool google cancel <session>      # or: sudo 5dive tool rm google (sign out)
 
 # Hire: a standard seat sends its human a one-tap link; an admin seat hires
 # itself with `sudo 5dive agent import <slug> --as=<name>`. Slugs: 5dive market.
@@ -1039,14 +1048,15 @@ sudo 5dive tool rm github
 # (DIVE-5722): you write only the name and the need; the skills, role and voice
 # are picked as the Mini App picks them. Making the draft hires nothing.
 5dive hire-link --create --name=<Name> --description="<the need, in the owner's words>" --json
-# -> prints the draft and its card link; the owner taps Hire on the card.
-# An admin seat hires it itself, but ONLY on the owner's clear yes in chat:
+# -> prints the draft and its card link. Standard seat: show your owner the
+# draft and card; they tap Hire on it. Admin seat: hire it now, then tell them:
 5dive hire-link custom-<id> --hire --json
 
-# The yes rule, both paths (DIVE-5823/5824): "I need someone to ..." is a NEED,
-# not a yes. Check `5dive market <words>` first, propose your pick, and wait.
-# "Hire dario" (a named agent) IS the go-ahead. A standing "full authority"
-# grant is not a yes for a hire.
+# The owner's ASK is the go-ahead, both paths (DIVE-5974, since 0.86.0 — it
+# reverses DIVE-5823/5824's "a need is not a yes"). "I need someone to ..." →
+# check `5dive market <words>`, and an admin seat hires its pick, then tells
+# the owner who ("fire <name>" undoes it); a standard seat sends them
+# `5dive hire-link <slug>`. Only a hire that needs a PLAN UPGRADE waits for a yes.
 
 # On a PARTNER box only: hire from the partner's catalogue, same account, and
 # the new agent shows in the partner's list (DIVE-5168). No root needed.
@@ -1145,6 +1155,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.84.0** (commit `61ea018c`, 2026-10-09). A given box's
+_Synced to 5dive CLI **0.86.2** (commit `487f30dd`, 2026-10-12). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
