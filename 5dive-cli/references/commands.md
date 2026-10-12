@@ -46,8 +46,9 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
                                                # --connector=tools lands it in every agent's env (tools.sh)
 5dive secret link <DIVE-N> [--ttl=<minutes>]   # root-only: mint a one-time https link for an open secret
                                                # gate; the owner pastes there, the gate clears (30 min default)
-5dive tool ls [--json] | set <tool> | rm <tool>   # keys every agent sees as env vars (GH_TOKEN, FAL_KEY…);
-                                               # set/rm root-only, values on stdin. The Mini App's Tools screen
+5dive tool ls [--json] | set <tool> | rm <tool>   # keys every agent sees as env vars (GH_TOKEN, FAL_KEY, AWS_*…);
+                                               # set/rm root-only, values on stdin
+5dive tool google start|poll|submit|cancel ...  # root-only: Google signs in instead of taking a key (DIVE-5934)
 5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
 5dive proof      ...                 # zero-human autonomy badge publisher (on/off/status/scorecard/publish/tick)
 5dive trace      <id|DIVE-N> [--json] [--no-audit]   # read-only origin/lifecycle/gate-provenance for one task
@@ -70,7 +71,7 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
 5dive selfcheck [--json] [--only=<probe,...>] [--full] [--assume-clean] [--strict] [--allow=<probe,...>] [--report=<file>] [--label=<env>] [--list]
 5dive models    [--json]             # current Claude model id per alias (opus/sonnet/fable/haiku)
 5dive whoami    [--json]             # actor/authority/tier, with the SOURCE of each; exits 6 if unmeasurable
-5dive bug       [--file]             # preview (default) or file a diagnostic issue against 5dive-ai/5dive
+5dive bug       --what=<text> [--file [--owner-approved]]   # preview (default), or send to 5dive's API on the owner's yes
 5dive --version
 5dive update --check                 # read-only: behind/stale? (no root)
 5dive self-update                    # upgrade CLI + plugins, RESTARTS ALL AGENTS (alias: update)
@@ -88,7 +89,10 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
 ## Agents
 
 ```
-5dive agent list                              # --json carries model + effort per agent
+5dive agent list                              # --json carries model + effort per agent, and
+                                              #   orgBlocksChannels / orgChannelsOff: a seat whose
+                                              #   Claude Team/Enterprise org policy blocks its channel
+                                              #   plugins (gets messages, never answers) — DIVE-5925/5993
 5dive agent info <name>                       # type, CLI version, model, channel + state
 5dive agent types
 5dive agent create <name> --type=<type>
@@ -347,6 +351,7 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                                             #   omit = org lead/coordinator
                [--parent=<id|DIVE-N>] [--project=<key>] [--from=<who>]
                [--recurring="<cron>"]        # 5-field cron — creates a recurring TEMPLATE
+               [--tz=<zone>]                 #   read in the BOX's zone by default; --tz=Asia/Bangkok|UTC|...
                [--task-budget=<tokens|$cost>] # per-run spend cap for the on-host loop (DIVE-824)
                [--verifier=<agent>] [--accept=<criteria>] [--verify=<cmd>] [--max-iters=<n>]
                [--no-verify] [--verify]      # skip / DEMAND a grader for this row, over the box default
@@ -690,7 +695,11 @@ Never mutates the tier or the clear path; never overrides an explicit rec.
 A task created with `--recurring="<cron>"` is an inert template (excluded from
 default `ls`, heartbeat, inbox). The heartbeat tick materializes it into a
 standard todo when the cron matches, skipping if a prior instance is still open.
-Templates default to `fresh` (worker `/clear`s first). No catch-up for missed
+Templates default to `fresh` (worker `/clear`s first). Since 0.85.0 (DIVE-5913)
+the cron is read in the **box's time zone** (the one `date` prints), stamped on
+the template when filed; `--tz=<zone>` picks another. Templates filed before
+that carry no zone and stay UTC — `5dive task set-tz <template> <zone|box>`
+moves one, and `task show` / `ls --recurring` print the zone. No catch-up for missed
 ticks — keep schedules coarse. Turn a recurring loop off by `task rm`-ing the
 template.
 
@@ -1368,6 +1377,8 @@ fails the whole view.
 5dive doctor --fix                             # (alias --repair) attempt reversible fixes
 5dive doctor --dry-run                         # preview fixes (also alongside --fix)
 5dive doctor --category=<c>                    # deps|types|auth|creds|registry|shelld|channels|host|memory
+                                               #   auth probes each (type, auth profile) a seat runs on,
+                                               #   reported as auth/<type>:<profile> (DIVE-5957)
 5dive update --check [--json]                  # behind/stale? read-only, no root
 5dive self-update                              # upgrade CLI + plugins; RESTARTS every agent
 5dive uninstall [--purge] [--yes]              # remove 5dive (--purge also wipes state + user)
@@ -1382,22 +1393,31 @@ to list-only so a library upgrade can't bounce the whole fleet.
 ## Bug reports (diagnostic issue filing — DIVE-2323)
 
 ```
-5dive bug [--verb=<name>] [--exit=<code>] [--no-probes] [--file]
+5dive bug --what=<text> [--verb=<name>] [--exit=<code>] [--argv=<line>]
+          [--no-probes] [--file [--owner-approved]]
 ```
 
-Preview (the default) builds and prints a diagnostic payload; files nothing.
-`--verb`/`--exit` name the 5dive verb that failed and its exit code, for
-context. `--file` re-prints the identical payload and then opens it as a
-GitHub issue against `5dive-ai/5dive` (via `5dive gh issue create`, so it
-files as `5dive-bot` when routing allows it) — a TTY also gets an
-interactive y/N, and there is no separate unattended path: an agent takes
-the same `--file` flag a human does. **The payload is a fixed ALLOWLIST**,
-never a denylist — version, OS, bash version, install method, the failing
-verb + exit code, and `selfcheck` probe **name + verdict pairs only** (never
-the free-text `reason`/`detail` fields underneath them, which is where
-paths/hostnames/agent names could leak). `--no-probes` drops the selfcheck
-summary entirely. Nothing ever leaves the box except via an explicit
-`--file`.
+Preview (the default) builds and prints a diagnostic payload; sends nothing.
+Preview freely; **send only after your owner agrees** (since 0.85.0, DIVE-5926).
+`--file` re-prints the identical payload and POSTs it to **5dive's own API**
+with this box's key — nothing goes to GitHub or anywhere public (it used to
+open a public GitHub issue; that route is gone). With no TTY (an agent)
+`--file` is **refused without `--owner-approved`**: ask your owner in one
+line, naming what failed, and pass the flag only on their yes. A TTY gets a
+y/N prompt instead. `--what` is REQUIRED to file (refused, not sent empty,
+when there is no TTY); `--argv` carries the failing invocation with sensitive
+`=<value>` flags redacted. The preview says when NOT to ask: a defect your
+owner was already asked about prints "already asked on <date>; don't ask
+again", and the owner is asked about at most one bug a day. An unreachable API
+spools the report under `${XDG_STATE_HOME:-~/.local/state}/5dive/bug-spool/`
+and the next approved `--file` sends it.
+
+**The payload is a fixed ALLOWLIST**, never a denylist — version, OS, bash
+version, install method, the failing verb + exit code, `selfcheck` probe
+**name + verdict pairs only** (never the free-text `reason`/`detail` fields
+underneath them, which is where paths/hostnames/agent names could leak), and
+the two fields you type yourself, `--what` and `--argv`. `--no-probes` drops
+the selfcheck summary entirely. Every byte is printed before it is sent.
 
 ## Selfcheck (does the fleet's OWN instrumentation still work?)
 

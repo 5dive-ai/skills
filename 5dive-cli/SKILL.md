@@ -564,7 +564,7 @@ routing decision without running anything.
 
 - `references/commands.md` — every subcommand and flag, copy/pasteable.
   Includes the less-frequent top-level verbs not recapped above: `5dive deploy`
-  (delegated production deploy, INST-5), `5dive bug` (diagnostic issue filing),
+  (delegated production deploy, INST-5), `5dive bug` (diagnostic report to 5dive, sent only on the owner's yes),
   `constitution` (front door onto the machine-enforced guardrails), `5dive acp`
   (speaks ACP over stdio so a client like Buzz/Zed can select 5dive as a
   coding-agent runtime — spawned BY the client, not run directly, DIVE-3017),
@@ -603,6 +603,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.84.0** (commit `61ea018c`, 2026-10-09). A given box's
+_Synced to 5dive CLI **0.86.2** (commit `487f30dd`, 2026-10-12). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
