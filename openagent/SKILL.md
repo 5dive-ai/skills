@@ -3,8 +3,9 @@ name: openagent
 description: >-
   Author your own OpenAgent persona file and mint its shareable holo trading
   card — write, validate, tier and render `<id>.persona.yaml`. Use when
-  creating or updating YOUR identity as a persona or card, or provisioning a
-  live teammate from one.
+  creating or updating YOUR identity as a persona or card, provisioning a
+  live teammate from one, or moving an agent (persona, skills, memory) to
+  another harness as one agent.tar.gz.
 ---
 
 # openagent — author your persona, mint your card
@@ -432,6 +433,29 @@ provisions a fresh agent under `<name>` through the normal import flow.
 - **Self-author → self-provision.** Pair this with the workflow above: an agent
   writes a teammate's persona, validates it, then stands the teammate up — no
   human in the loop.
+
+## Move an agent to another harness
+
+One file carries the whole agent: its persona, its skills and, with `--memory`,
+its memory files (SPEC.md, "Agent bundle"):
+
+```bash
+npx @5dive/openagent@0.51.0 export --from=openclaw --memory -o agent.tar.gz   # hermes|openclaw|claude-code|codex
+npx @5dive/openagent@0.51.0 import agent.tar.gz --to=hermes                   # or --to=5dive to hire it on a box
+```
+
+- **Plain copy.** No rewriting, no model, no network. Memory files land as they
+  are, so a harness that keeps memory in another shape reads them as notes.
+- **It never clobbers.** A skill or memory file already there with other content
+  stops the import before anything is written; `--overwrite` replaces them.
+- **No secrets, both ways.** A bundle holding an API key, a token or a private key
+  is refused on export and on import, naming the file and line.
+- **5dive reads and writes the same file.** `5dive agent export --format=pack`
+  makes one `openagent import` takes, and `5dive agent import` takes one
+  `openagent export` made. Distilled memory, the review step and the leak scan
+  are 5dive's own extras on top.
+- Export needs the persona file. `install` / `import` keep a copy in
+  `~/.openagent`; for one installed before 0.51, pass `--persona <file>`.
 
 ## Tips
 - **Work in a writable directory.** Don't assume your cwd is writable — on
