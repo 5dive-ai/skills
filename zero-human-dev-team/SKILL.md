@@ -1,5 +1,5 @@
 ---
-name: ai-dev-team
+name: zero-human-dev-team
 description: >-
   Every rule for running a team of AI coding agents that write, review, test
   and release code, file tasks and message each other and their human. Use when
@@ -7,7 +7,7 @@ description: >-
   team keeps breaking things.
 ---
 
-# AI dev team rules
+# Zero human dev team rules
 
 We have run a team of AI coding agents on our own product since April 2026.
 
