@@ -207,6 +207,14 @@ sudo 5dive agent ask scout \
 `--timeout` fires) and returns whatever was on screen, chrome included — ask
 for a terse final summary if you need something clean to parse.
 
+A send to a **busy** seat is spooled, not typed: it still exits 0, but its
+audit row carries `queued=1 spool_depth=N`, and the spool drains on the
+heartbeat's tick, minutes apart — not the moment the seat goes idle. A scoped
+`ask` (one standard seat asking another) whose question was spooled says
+"queued, not asked" with `queued:true`; a scoped `ask` that times out no
+longer claims a DELIVERY failure, it names the audit row to check (since
+0.94.0, DIVE-6414).
+
 If a user pings you on a Telegram/Discord chat where the target agent's bot
 is **also** a member, don't relay the answer yourself — hand it off with
 `--reply-to-chat=<id> [--reply-to-msg=<id>]` (values come from the inbound
@@ -300,14 +308,23 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 `--result`**, naming the commit it actually read. Without it the merge gate
 holds at `no-graded-sha-stated`; a sha that is not the PR head holds at
 `graded-sha-is-not-the-head` (DIVE-2656). `--no-graded-sha` is the audited
-escape, not the normal path.
+escape, not the normal path. A grade-only `task verify --no-done` on a row
+that is already `done`/`cancelled` APPENDS under the recorded result after a
+dated seam; it no longer replaces the maker's text (since 0.91.1, DIVE-6248).
 
 **A small delivery closes without booking a grader (DIVE-4559).** On a box
 running `5dive config verify-small=<lines>`, a PR under that many changed lines
 that touches nothing in the blast radius (scheduler, task store, credentials,
 deploy, shared libs, sudo policy, systemd, schema, provisioning) closes at
 delivery and says so. `--verify` on the row beats it; `--no-verify` never beats
-the opposite, delivery-time UPGRADE.
+the opposite, delivery-time UPGRADE. **Since 0.91.0 (DIVE-6223) `task deliver`
+runs the same check, plus the docs-only rule** (only tests, docs or changelog
+files): such a delivery books no grader, is recorded `graded_by=ci:small` or
+`ci:docs-only` at the delivered head, and goes to the box's merge seat, which
+alone may `task merge` it — and only with the head still the graded sha, every
+required check green and no path needing a person's review. Still graded:
+`--verify` rows (this now beats docs-only too), `--review=<seat>` rows, rows
+binding companion PRs, and any row a grader already rejected or FAILed.
 
 **The verifier's own read is bounded**: `5dive task grade-context <id>`
 materializes the private detached grading worktree and prints the grading
@@ -393,6 +410,14 @@ with your recommendation so the human can one-tap it.
 Under the 25-word refusal sits a **~15-word render budget**: an ask longer than
 that is *warned* ("will render cut") because the gate message truncates it on a
 phone. The warning files; the refusal does not. Aim at the 15.
+
+**Write the ask in the owner's language (since 0.94.0, DIVE-6433).** The gate's
+own chrome — header, Recommended line, buttons, reminders, `/inbox` re-send —
+follows the owner's Telegram language (`ru` → Russian, else English). Your
+`--ask` and `--options` are NOT translated: a seat whose owner writes Russian is
+told so on its dispatch line, and `task need` warns when its ask has no Russian
+in it. Button data and `task answer --value`s stay English, so a tap answers
+the gate the same either way.
 
 **`--options` is decision-only.** `--options` on any other `--type` is refused
 outright (`--options only applies to --type=decision`), and `--recommend` on a
@@ -492,6 +517,9 @@ on an older box the key lands root-only.)
 mint it itself: `sudo 5dive secret link DIVE-12` prints the same one-time link.
 Send that LINK in your reply (never ask for the key itself). A standard seat
 cannot: point the owner to the "Open secure link" card in the Telegram Mini App.
+Since 0.91.0 (DIVE-6205) a gate has **one live link**: a second `secret link`
+while the first is unexpired exits 3 and names the expiry; `--again` mints a
+new one anyway. A spent link opens a "This request is closed" page.
 
 **A throwaway key may come by chat:** a free-tier or test key, one the owner says
 is disposable, or a value that isn't secret. When unsure, use the link. Never
@@ -579,7 +607,8 @@ routing decision without running anything.
   `5dive hire-link` (one-tap hire link for your human, or `--create` a custom
   agent for a need no catalogue agent fits) and, on a partner box,
   `5dive partner hire` — plus `5dive machine add|rm|ls` (attach a machine any
-  agent reaches as `ssh <name>`, DIVE-5622), plus the owner surfaces `5dive telegram-app link`
+  agent reaches as `ssh <name>`, DIVE-5622; `add --note="<what it is for>"`
+  puts the note on its line in every Claude seat's CLAUDE.md, DIVE-6143), plus the owner surfaces `5dive telegram-app link`
   (Mini App sign-in) and `5dive disk sweep|alarm|tick` (safe cache sweep +
   low-disk alarm) are covered in `5dive-cli-extras`.
 - **The web UI left core and is a plugin now.** `5dive plugin add
@@ -603,6 +632,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.86.2** (commit `487f30dd`, 2026-10-12). A given box's
+_Synced to 5dive CLI **0.94.1** (commit `ebbb4588`, 2026-10-19). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

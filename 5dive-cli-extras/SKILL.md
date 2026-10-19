@@ -20,7 +20,8 @@ the basic task queue. This skill is the administration surface on top of it:
   `hire --from-market`) or fire one (`5dive fire`).
 - **Auth and accounts** — auth recovery (`error.class=auth_required`,
   `--defer-auth`, device-code login via `agent auth start/poll/submit`),
-  BYO-provider agents (`--provider`), multi-account auth (`5dive account`).
+  BYO-provider agents (`--provider`), multi-account auth (`5dive account`),
+  moving a seat between accounts as usage fills (`agent rotation`).
 - **Fleets and hosts** — declarative fleets and company templates
   (`5dive up/down/ps/export`, `team import`, roster-wide `--type=<harness>`),
   every seat's live TUI on one screen (`5dive wall`), widening an existing
@@ -103,7 +104,21 @@ sudo 5dive agent import <slug|pack.tar.gz> --as=<name> [--allow-hooks] --json
 A pack's hooks are arbitrary shell that auto-runs on the new agent's tool
 events, so `import` is **deny-by-default on hooks** — stripped unless you
 pass `--allow-hooks` — and refuses any member with a `..`/absolute path or a
-symlink (zip-slip + link-escape guards).
+symlink (zip-slip + link-escape guards). Since 0.91.0 it also refuses a pack
+holding a secret-shaped string (the same tripwire export runs).
+
+**A pack is an OpenAgent agent bundle (since 0.91.0, DIVE-6202).**
+`agent export --format=pack` writes the open bundle format (sha256 per member,
+skill bodies under `skills/<id>/`), so `openagent import agent.tar.gz
+--to=hermes|openclaw|claude-code|codex` lands it in another harness; and
+`agent import` reads a bundle `openagent export` wrote, adopting its memory as
+`raw`. A member whose sha256 does not match imports with a warning naming it.
+
+**a2a vouching (since 0.90.0, DIVE-6169).** `sudo 5dive agent a2a-vouch <name>`
+tells a2a.5dive.ai the agent is this box's own (did:key read from
+`~/.openagent/agent.key`), so its posts skip the per-IP caps and the spam check
+— never the per-agent daily cap, the leak guard or a ban. `agent import` vouches
+by itself when it adopts a persona's signing key; a failed vouch only warns.
 
 `agent clone <src> <dst>` copies an existing agent's type/config into a new
 one. `--with-skills=<spec>[,<spec>...]` (bare id or `<owner/repo>:<id>`) /
@@ -143,7 +158,14 @@ later. Keep the background HAIKU slot on a prompt-caching-capable model.
 sudo 5dive agent config worker-1 set model=claude-opus-4-8
 sudo 5dive agent config worker-1 set effort=high
 # effort: low|medium|high|xhigh|max — claude only; xhigh/max are Opus-tier.
+sudo 5dive agent config worker-1 set chrome=on   # Claude in Chrome (DIVE-6345)
 ```
+
+`chrome=on` (claude seats, since 0.93.0) turns the extension on in the box's
+Chrome policy. A setup token cannot run Claude in Chrome, so the seat needs its
+own claude.ai login first (`5dive browser claude connect`: one sign-in, one
+Authorize tap); until then it starts as before, Chrome off, and says how to
+connect. `chrome=off` puts it back on the shared token at its next restart.
 
 Move a seat between harnesses **in place** (DIVE-5501): same name, unix user,
 bot, tasks and grants; memory and instructions are converted, and the old
@@ -210,7 +232,32 @@ sudo 5dive account set-model acme-prod --model=<slug>
 The reserved name `default` is rejected by `account add`/`rename` — at the
 agent level, `auth-profile=default` means "no override, use the shared
 `/etc/5dive/connectors/<type>.env`". Check `account usage` **before** blaming
-quota for a failure or moving agents between accounts.
+quota for a failure or moving agents between accounts. A standard seat that
+holds the self-account grant runs `account list` and `account usage` without
+sudo, over that rail (since 0.94.0, DIVE-6430); one without it is still refused.
+
+#### Rotation: move a seat to an account with room
+
+A seat's **pool** is the accounts it may move between (DIVE-4416):
+
+```bash
+5dive agent rotation get worker-1                       # pool, current, cooldowns (read-only)
+sudo 5dive agent rotation set worker-1 --enabled=true --accounts=acme,acme-2
+sudo 5dive agent rotation set worker-1 --balance=true   # drain the pool evenly (DIVE-6106)
+sudo 5dive agent rotation rotate worker-1 [--cooldown-current=<epoch>] [--require-live-headroom]
+5dive agent rotation rotate <yourself> --wall=<reset-epoch>   # your own usage-limit move (DIVE-6121)
+sudo 5dive agent rotation cooldown worker-1 acme --until=<epoch>
+sudo 5dive agent rotation clear-cooldown worker-1 [acme]
+```
+
+`--wall` moves only to an account another live seat measures under the limit,
+parks the walled one until its reset and never moves again within 30 min; with
+no room the seat waits. A standard seat may run that one form on itself (the
+telegram plugin's stop-failure hook does, and resumes the chat on the new
+account). Balance mode moves an idle seat at a fresh task boundary when its 7d
+is 15+ points above the least-used account with 5h room — at most once per 3h
+per seat, once per tick fleet-wide. An account with no fresh reading gets one
+live probe; an unmeasured account never counts as 0% (DIVE-6149, DIVE-6210).
 
 ## Telegram/Discord pairing and shared team bot
 
@@ -321,11 +368,20 @@ sudo 5dive agent grant dev merge      # also: push | deploy — re-render a STAN
 sudo 5dive agent grant dev root       # CONFER unrestricted root (any command, any
                                       # user) on a seat of any tier — wider than
                                       # `admin`, which is the 5dive CLI as root only.
+sudo 5dive agent grant dev admin      # re-isolate to admin (DIVE-6410), from
+                                      # standard OR from managed root
 ```
 
 `grant root` writes a managed, visudo-checked drop-in, stamps the seat
 `beyond-admin` so `agent info` stops disagreeing with the grant, and audits it.
-**There is no revoke verb yet** — treat it as one-way.
+**Since 0.94.0 it is no longer one-way:** `grant <name> admin` narrows a root
+seat back, rendered exactly as `agent create --isolation=admin` renders it. It
+refuses a sandboxed seat or a sudoers file the CLI did not write.
+
+The tier a NEW seat gets is a box setting: `sudo 5dive config
+seat-isolation=admin` makes every create or import that names no `--isolation`
+admin (a pack manifest's tier included); `default` restores first-seat-admin,
+later-seats-standard. An explicit `--isolation` always wins.
 
 ## Declarative fleets: compose + team templates
 
@@ -356,6 +412,14 @@ sudo 5dive up --type=codex ; sudo 5dive ps --type=codex
 5dive team plan [<lead>]                       # what is waiting for the yes
 5dive team start [<lead>] --skip=DIVE-41,DIVE-42   # release it, minus what was dropped
 5dive team decline [<lead>]                    # start none of it
+# The kickoff's title is written TO the owner in their language (DIVE-6484):
+# --lang=ru|en|zh on import/up, else the template's `lang:`, else the lead's
+# paired chat, else English.
+sudo 5dive team import startup --lang=ru --json
+# A template from a file or stdin instead of the registry (DIVE-6088); a seat
+# may carry a signed `pack_url:`. Every link is fetched before any agent is
+# created, so one refused link leaves nothing half-made.
+sudo 5dive team import acme --template=./team.yaml --json
 
 # One character is one agent per box (DIVE-5769): a seat whose persona is
 # already here is filled by that agent, even when he is in another team. He is
@@ -411,6 +475,11 @@ append to the body and a2a separately:
 ```bash
 5dive task followup DIVE-123 --text="also cover the empty-list case" [--from=<who>]
 ```
+
+On a `done` or `cancelled` row it no longer refuses (since 0.90.0, DIVE-6157):
+it files a linked child (`--parent=<ident>`, same assignee and priority, title
+"Follow-up: …", the parent's result in the body) and wakes the assignee once.
+The finished row is never reopened; the JSON reply adds `child`.
 
 **Quiet waits: `task park`.** Sleep a task without putting it in the human
 inbox:
@@ -486,6 +555,14 @@ sudo 5dive heartbeat off worker-1
 
 Enrolment uses the agent's short name, the same name `task --assignee`
 expects. No catch-up for missed ticks — keep schedules coarse.
+
+Since 0.93.0 (DIVE-6359) the tick also reads the OpenAgent inbox of every seat
+holding `~/.openagent/agent.key` (`openagent inbox --new`, CLI 0.61.0+) and
+wakes it once per batch of new DMs, each inside an UNTRUSTED block (a question
+comes with its `openagent dm --re` command, an answer with "do not reply"); an
+empty inbox costs no turn. Read every 5 min, then not for 30 min after a wake.
+Opt one seat out with `openagentInbox: false` in the registry, the box with
+`FIVE_OPENAGENT_INBOX=0`.
 
 ## Loops: relay work across agents (+ human gates)
 
@@ -830,6 +907,17 @@ Two things changed under this verb since 0.32.0:
   rewrites `SUDO_USER` to `root` one process later and makes the step refuse — check
   `5dive --version` before you trust this paragraph.
 
+Since 0.91.0 a **bare `plugin add browser` installs from 5dive-ai/5dive-browser**
+(DIVE-6241), not the registry's older mirror; `browser@5dive-plugins` still
+names the mirror, and a box already on it keeps it. A plugin with a setup step
+names that step for its packages, not `npm install` (DIVE-6112).
+
+**`plugin upgrade` re-pins each Claude seat** (since 0.92.0, DIVE-6304) and
+reports the pin it read back (`re-pinned 1.39.0 -> 1.41.0`); a seat still below
+the box's version counts as failed. It does not restart seats: a seat whose
+running session has the old version loaded is named with the `5dive agent
+restart` that loads the new one.
+
 ## Is a seat actually alive? `5dive liveness` (DIVE-3778)
 
 A process-presence check calls a wedged seat green. `liveness` grades a seat
@@ -980,6 +1068,9 @@ runs only on a box that set `reflex-model=` and holds the key, or a custom
 `reflex-endpoint=`. The two browser drafters, `login-marker` (DIVE-4928) and
 `pick-ref` (DIVE-4929), are shadow too: the code lists and verifies the
 candidates, the model only picks one, and nothing is written to an adapter.
+A standard seat cannot read the box's key file, so since 0.88.0 (DIVE-6115) its
+`reflex status`, `pick-ref` and `login-marker` run root-side through its grant
+and only the decision comes back — `status` then reads configured true.
 
 ## Hardened host remediation: `5dive host`
 
@@ -1073,7 +1164,8 @@ Two box-owner surfaces round this out:
   with `5dive config telegram-app=off`.
 - `sudo 5dive disk sweep [--dry-run]` deletes ONLY caches a tool rebuilds on
   its own (old Chrome temp files, npm/nvm download caches, `apt-get clean`,
-  disabled snap revisions); `5dive disk alarm` tells the owner once at <5%
+  disabled snap revisions, and since 0.92.0 old Codex release dirs, leaked
+  Chrome cache dirs and `pip cache purge`, DIVE-6329); `5dive disk alarm` tells the owner once at <5%
   free; `5dive disk tick` is the hourly cron driver (DIVE-5190). Never touches
   homes, projects, agent memory, transcripts, model caches or backups. Log:
   `/var/log/5dive/disk-sweep.log`.
@@ -1146,6 +1238,13 @@ sudo 5dive watch                      # htop-style live view (interactive TTY on
 ```
 
 Treat any `selfcheck` "not-reached" probe as "unmeasured here", not "fine".
+`update --check` reports the install receipt in the past tense — `last resolved
+v<x> at <time> (from <rung>)` — and on the canary rung adds `(stale: v<y>
+published since)` (since 0.92.0, DIVE-6288); doctor grades freshness against
+what `update` would install, not the newest tag (DIVE-6049). `doctor
+--category=registry` warns `registry/parked-running` for a seat parked in the
+registry whose unit still runs — its update restart is held (since 0.93.1,
+DIVE-6382): `agent stop` it if the park is real, `agent start` if stale.
 `5dive self-update` upgrades the CLI + plugins and **restarts every agent on
 the host** — never run it casually from an agent session.
 
@@ -1155,6 +1254,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.86.2** (commit `487f30dd`, 2026-10-12). A given box's
+_Synced to 5dive CLI **0.94.1** (commit `ebbb4588`, 2026-10-19). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
