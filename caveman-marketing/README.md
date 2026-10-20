@@ -1,4 +1,13 @@
+<div align="center">
+
+<img src="assets/caveman-icon.svg" alt="Caveman marketing" width="120">
+
 # Caveman marketing
+
+![license](https://img.shields.io/badge/license-MIT-blue)
+![runs with npx skills](https://img.shields.io/badge/runs%20with-npx%20skills-success)
+
+</div>
 
 ![explain it to cavemen](assets/hero.png)
 
