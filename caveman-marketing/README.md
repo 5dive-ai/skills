@@ -9,7 +9,7 @@
 
 </div>
 
-![explain it to cavemen](assets/hero.png)
+<p align="center"><img src="assets/hero.png" alt="explain it to cavemen" width="360"></p>
 
 **Your AI agent cuts any ad, landing page or signup to one picture, 15 words and one button.**
 
@@ -22,18 +22,18 @@ npx skills add 5dive-ai/skills --skill caveman-marketing
 Three fresh agents each got only this skill and one real homepage, on a phone, on 2026-10-20.
 The real screenshot is on the left and the skill's version is on the right.
 
-![apple.com before and after](assets/apple.png)
+<p align="center"><img src="assets/apple.png" alt="apple.com before and after" width="480"></p>
 
-![hubspot.com before and after](assets/hubspot.png)
+<p align="center"><img src="assets/hubspot.png" alt="hubspot.com before and after" width="480"></p>
 
-![atlassian.com before and after](assets/atlassian.png)
+<p align="center"><img src="assets/atlassian.png" alt="atlassian.com before and after" width="480"></p>
 
 ## On desktop too
 
 The same rules on a 1440×900 screen. The picture takes the left half, and the words and the one button
 sit on the right.
 
-![hubspot.com on desktop, before and after](assets/hubspot-desktop.png)
+<p align="center"><img src="assets/hubspot-desktop.png" alt="hubspot.com on desktop, before and after" width="480"></p>
 
 ## The test
 
