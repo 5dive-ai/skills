@@ -19,6 +19,13 @@ The real screenshot is on the left and the skill's version is on the right.
 
 ![atlassian.com before and after](assets/atlassian.png)
 
+## On desktop too
+
+The same rules on a 1440×900 screen. The picture takes the left half, and the words and the one button
+sit on the right.
+
+![hubspot.com on desktop, before and after](assets/hubspot-desktop.png)
+
 ## The test
 
 Look for 3 seconds, then cover the screen. Can you answer all three?

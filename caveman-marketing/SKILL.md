@@ -113,6 +113,8 @@ and exits non-zero if any screen fails. `scripts/test.sh` checks the checker.
   second button with other words into the image.
 - **Landing page.** The screen is the first view on a phone (390×844). The menu becomes
   one icon. Each screen further down follows the same rules and repeats the same button.
+  On desktop the picture fills the left half, and the words, 👇 and button sit in the right
+  half. Same copy, same 15-word cap.
 - **Funnel.** Every step is a screen, from the ad to the first win. Sign-in is one button
   ("Continue with Google") with email as a small link. A legal line the lawyers need is
   one short grey line, and it counts.
