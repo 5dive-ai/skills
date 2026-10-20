@@ -1,0 +1,7 @@
+# atlassian.com top, caveman version
+☰
+picture: a Jira board; a card an AI agent picked up slides into "Done ✓" beside teammates' cards
+Your team and AI agents plan and finish work.
+👇
+[Start with Jira]
+(Contact us)
