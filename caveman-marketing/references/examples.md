@@ -112,9 +112,9 @@ page, `README.md`.
 
 | Page | BEFORE | AFTER | Files |
 | --- | --- | --- | --- |
-| apple.com | 18 words · 2 filled buttons · "Hello, hello." says nothing | 12 words · 1 button | `examples/apple-home.*` |
+| apple.com | 18 words · 2 filled buttons · "Hello, hello." says nothing | 10 words · 1 button | `examples/apple-home.*` |
 | hubspot.com | 44 words · 2 filled buttons · "agentic", "platform" | 15 words · 1 button | `examples/hubspot-home.*` |
-| atlassian.com | 32 words · an event banner where the picture goes | 15 words · 1 button | `examples/atlassian-home.*` |
+| atlassian.com | 32 words · an event banner where the picture goes | 12 words · 1 button | `examples/atlassian-home.*` |
 | hubspot.com, desktop 1440×900 | 76 words · 2 filled buttons · "agentic", "platform", "solutions" | 15 words · 1 button (same copy, picture left) | `examples/hubspot-desk.*` |
 
 Apple's AFTER line "The first iPhone that folds" comes from Apple's own iPhone Duo page

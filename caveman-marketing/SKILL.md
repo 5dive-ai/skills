@@ -46,10 +46,12 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
 1. **Picture first.** A picture fills the top half and does the explaining. Show the
    result happening (the ticket closing, the site fixed), not your dashboard. Words only
    label the picture.
-2. **15 words, max.** Count every word on the screen: headline, button, small links, the
-   step bar, text inside the picture. Don't count emoji, logos or the platform's own fixed
-   text (browser bar, "Sponsored", a card form's own field names). Run the checker.
-   Models and humans both miscount.
+2. **15 words, max. 6 in the headline.** Count every word on the screen: headline, button,
+   small links, the step bar, text inside the picture. Don't count emoji, logos or the
+   platform's own fixed text (browser bar, "Sponsored", a card form's own field names).
+   The headline is one sentence that says what the thing is or does, in words a stranger
+   can picture: "A ring that tracks your sleep." Not a slogan, not "a clearer X", not two
+   of the page's taglines stitched together. Run the checker. Models and humans both miscount.
 3. **One button.** Exactly one filled button, the biggest and brightest thing on the
    screen, with 👇 right above it. Everything else is small grey text. Three equal
    choices is a menu. The cookie banner never outshines it.
@@ -90,8 +92,8 @@ Input: a URL, a screenshot or pasted copy of an ad, a page, or each step of a fl
    (links, menus, second buttons), steps to the first win. These numbers lead your report.
 3. **Name the one job.** One sentence: who it's for and what they get. If you can't
    write it, the offer is the problem, not the copy. Say so and stop.
-4. **Rewrite each screen** in the screen format below: picture, then at most 15 words,
-   then one button. Keep the real claims and invent none. Caveman cuts words, not truth.
+4. **Rewrite each screen** in the screen format below: picture, then a headline of at most
+   6 words, then one button, at most 15 words in all. Keep the real claims and invent none. Caveman cuts words, not truth.
 5. **Check it.** `python3 scripts/check.py after.txt` until every screen passes. Warnings
    are judgment calls. Failures are not.
 6. **Show BEFORE above AFTER**, same size, counts under each. If you can render images,
@@ -103,7 +105,7 @@ Input: a URL, a screenshot or pasted copy of an ad, a page, or each step of a fl
 ```
 # landing / top
 picture: a chat bubble "Fix my site" and a reply "Done ✓"
-Say it. It's done.
+Say it and it's done.
 👇
 [Hire your team]
 (Log in)
@@ -114,7 +116,8 @@ Say it. It's done.
 - `[...]` is the one filled button. `(...)` is small grey text or a link.
 - `picture:` describes the picture. Only its words "in quotes" count, because they show
   on screen.
-- Every other line counts. `#` names a screen. `---` starts the next one.
+- Every other line counts, and the first one with words is the headline. `#` names a screen.
+  `---` starts the next one.
 
 `scripts/check.py` reads this format, prints PASS or FAIL per screen with the reason,
 and exits non-zero if any screen fails. `scripts/test.sh` checks the checker.
