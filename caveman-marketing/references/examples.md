@@ -1,4 +1,4 @@
-# Examples: three real screens, before and after
+# Examples: four real screens, before and after
 
 Big companies with good products. They're here because even they lose the 3-second
 glance. Snapshots from 2026-10-20; the live pages may have changed since. Every
@@ -79,7 +79,7 @@ tapped said "Get Started", and this page says "Talk with a sales expert" and end
 ① Email › ② Time
 picture: a calendar with one time circled
 Talk to an expert.
-Your work email
+{Your work email}
 👇
 [Pick a time]
 ---
@@ -101,6 +101,33 @@ What changed:
 - One question. Job level, department and the rest get asked on the call.
 - The funnel ends on a booked call, the thing the visitor came for, instead of a form
   that was sent.
+
+---
+
+## 4. Search page: google.com
+
+[google.com](https://www.google.com/), first view on a phone (390×844), seen from Germany
+
+**BEFORE** · 31 words · the search box sits under the logo with nothing to press, and the
+only filled button is "Sign in" at the top · a list of trending searches fills the rest ·
+grunts: what ✓ · want ? · tap ? (the box or Sign in?)
+
+**AFTER** · 9 words · 1 field and 1 button
+
+```
+☰
+picture: the Google logo, big
+Search the web with Google.
+{Search Google}
+👇
+[Google Search]
+```
+
+What changed:
+- Typing is the one action, so the box stays, right above its button. A "Google Search"
+  button with nothing to type into would be a button that does nothing.
+- The headline says what the site is and what you get from it.
+- Sign in and the trending list are for after the first search.
 
 ---
 

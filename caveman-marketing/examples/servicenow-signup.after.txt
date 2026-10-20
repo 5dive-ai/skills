@@ -2,7 +2,7 @@
 ① Email › ② Time
 picture: a calendar with one time circled
 Talk to an expert.
-Your work email
+{Your work email}
 👇
 [Pick a time]
 ---

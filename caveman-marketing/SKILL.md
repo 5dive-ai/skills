@@ -47,24 +47,34 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
    result happening (the ticket closing, the site fixed), not your dashboard. Words only
    label the picture.
 2. **15 words, max. 6 in the headline.** Count every word on the screen: headline, button,
-   small links, the step bar, text inside the picture. Don't count emoji, logos or the
-   platform's own fixed text (browser bar, "Sponsored", a card form's own field names).
-   The headline is one sentence that says what the thing is or does, in words a stranger
-   can picture: "A ring that tracks your sleep." Not a slogan, not "a clearer X", not two
-   of the page's taglines stitched together. Run the checker. Models and humans both miscount.
+   a field's placeholder, small links, the step bar, text inside the picture. Don't count
+   emoji, logos or the platform's own fixed text (browser bar, "Sponsored", a card form's own
+   field names).
+   The headline is one sentence that says what the site is and what it sells you, in words a
+   stranger can picture: "A ring that tracks your sleep." Not a slogan, not "a clearer X", not
+   two of the page's taglines stitched together. Swap in another company's name: if the line
+   still fits, it says nothing ("All in one place."). Name the concrete thing instead
+   ("Meeting notes written for you."). Run the checker. Models and humans both miscount.
 3. **One button.** Exactly one filled button, the biggest and brightest thing on the
    screen, with 👇 right above it. Everything else is small grey text. Three equal
    choices is a menu. The cookie banner never outshines it.
    Nothing in the picture may look tappable either: a filled pill or chip with words on it
    reads as a second button. Use a stamp, a tick or plain text instead.
+   When the one action is typing (a search, an email, a web address), keep ONE field right
+   above the button: the field and its button are the one action, and the field's
+   placeholder words count.
 4. **The button says what happens next, and the next screen keeps the promise.**
    "Get started" that opens a 15-question sales form breaks it. "Pick a time" that
    opens a calendar keeps it.
 5. **Show the trail.** Every step of a flow shows a step bar (`① Email › ② Time`), with
    the current step lit. Three steps or fewer before the first win.
-6. **No tribe words.** Words only your industry says: platform, solution, workflow,
+6. **No tribe words, no hype.** Words only your industry says: platform, solution, workflow,
    seamless, leverage, end-to-end, interoperability. Spell out an acronym unless the
    buyer says it every day. If a 10-year-old would ask "what's that?", cut it.
+   Hype goes on sight: trusted, world's best, world-class, leading, #1, best-in-class,
+   powerful, revolutionary, next-gen, cutting-edge, innovative, all-in-one, ultimate.
+   Cutting it removes no fact, so "keep the real claims" never keeps it. "The world's best
+   commerce platform" becomes what it is: "Sell online with your own store."
 7. **The hunt ends with meat.** A funnel ends on the moment the customer gets the thing:
    the job done, the call booked, the first result. Ask one thing per screen, and only
    what you need to get them there. The rest can wait until after they're in.
@@ -98,7 +108,8 @@ Input: a URL, a screenshot or pasted copy of an ad, a page, or each step of a fl
    are judgment calls. Failures are not.
 6. **Show BEFORE above AFTER**, same size, counts under each. If you can render images,
    render both. If not, the `picture:` line is the brief for whoever draws it.
-7. **Grunt the AFTER.** All three answers, in 3 seconds, or go back to step 4.
+7. **Grunt the AFTER.** All three answers, in 3 seconds, or go back to step 4. Then swap
+   a competitor's name into the headline. If it still fits, it says nothing: back to step 4.
 
 ## Screen format
 
@@ -110,10 +121,17 @@ Say it and it's done.
 [Hire your team]
 (Log in)
 ---
-# next screen
+# a search page
+picture: the logo, big
+Search the web with Google.
+{Search Google}
+👇
+[Google Search]
 ```
 
 - `[...]` is the one filled button. `(...)` is small grey text or a link.
+- `{...}` is one text field, its placeholder inside. Only when typing is the one action, and
+  right above the button (a 👇 between them is fine).
 - `picture:` describes the picture. Only its words "in quotes" count, because they show
   on screen.
 - Every other line counts, and the first one with words is the headline. `#` names a screen.
@@ -147,6 +165,7 @@ Then each screen, BEFORE above AFTER, and one line per rule the BEFORE broke.
 
 ## Examples
 
-`references/examples.md` walks through a LinkedIn ad, a homepage and a signup funnel,
-all real pages from big companies, each with its BEFORE and AFTER in `examples/`, plus
-a test run on the apple.com, hubspot.com and atlassian.com homepages (rendered in `README.md`).
+`references/examples.md` walks through a LinkedIn ad, a homepage, a signup funnel and a
+search page, all real pages from big companies, each with its BEFORE and AFTER in
+`examples/`, plus a test run on the apple.com, hubspot.com and atlassian.com homepages
+(rendered in `README.md`).
