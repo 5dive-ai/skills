@@ -38,7 +38,7 @@ Look for 3 seconds, then cover the screen. Can you answer all three?
 
 1. A picture fills the top half.
 2. 15 words max. Every word counts, buttons too.
-3. One filled button, with 👇 above it.
+3. One filled button, with 👇 above it. Nothing in the picture looks like a second one.
 4. The button says what happens next.
 5. A step bar on every step of a signup.
 6. No words only your industry uses.

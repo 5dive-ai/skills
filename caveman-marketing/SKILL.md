@@ -53,6 +53,8 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
 3. **One button.** Exactly one filled button, the biggest and brightest thing on the
    screen, with 👇 right above it. Everything else is small grey text. Three equal
    choices is a menu. The cookie banner never outshines it.
+   Nothing in the picture may look tappable either: a filled pill or chip with words on it
+   reads as a second button. Use a stamp, a tick or plain text instead.
 4. **The button says what happens next, and the next screen keeps the promise.**
    "Get started" that opens a 15-question sales form breaks it. "Pick a time" that
    opens a calendar keeps it.
