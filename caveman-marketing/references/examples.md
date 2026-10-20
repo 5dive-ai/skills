@@ -101,3 +101,20 @@ What changed:
 - One question. Job level, department and the rest get asked on the call.
 - The funnel ends on a booked call, the thing the visitor came for, instead of a form
   that was sent.
+
+---
+
+## Test run: three famous homepages
+
+Three fresh agents each got only this skill and one real homepage on a phone (390×844,
+2026-10-20), and wrote the screen files themselves. The rendered pairs are on the skill
+page, `README.md`.
+
+| Page | BEFORE | AFTER | Files |
+| --- | --- | --- | --- |
+| apple.com | 18 words · 2 filled buttons · "Hello, hello." says nothing | 12 words · 1 button | `examples/apple-home.*` |
+| hubspot.com | 44 words · 2 filled buttons · "agentic", "platform" | 15 words · 1 button | `examples/hubspot-home.*` |
+| atlassian.com | 32 words · an event banner where the picture goes | 15 words · 1 button | `examples/atlassian-home.*` |
+
+Apple's AFTER line "The first iPhone that folds" comes from Apple's own iPhone Duo page
+("the first foldable iPhone"). tesla.com was in the plan but blocks automated browsers.

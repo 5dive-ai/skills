@@ -129,4 +129,5 @@ Then each screen, BEFORE above AFTER, and one line per rule the BEFORE broke.
 ## Examples
 
 `references/examples.md` walks through a LinkedIn ad, a homepage and a signup funnel,
-all real pages from big companies, each with its BEFORE and AFTER in `examples/`.
+all real pages from big companies, each with its BEFORE and AFTER in `examples/`, plus
+a test run on the apple.com, hubspot.com and atlassian.com homepages (rendered in `README.md`).
