@@ -19,6 +19,13 @@ The real screenshot is on the left and the skill's version is on the right.
 
 ![atlassian.com before and after](assets/atlassian.png)
 
+## On desktop too
+
+The same rules on a 1440×900 screen. The picture takes the left half, and the words and the one button
+sit on the right.
+
+![hubspot.com on desktop, before and after](assets/hubspot-desktop.png)
+
 ## The test
 
 Look for 3 seconds, then cover the screen. Can you answer all three?
@@ -31,7 +38,7 @@ Look for 3 seconds, then cover the screen. Can you answer all three?
 
 1. A picture fills the top half.
 2. 15 words max. Every word counts, buttons too.
-3. One filled button, with 👇 above it.
+3. One filled button, with 👇 above it. Nothing in the picture looks like a second one.
 4. The button says what happens next.
 5. A step bar on every step of a signup.
 6. No words only your industry uses.
