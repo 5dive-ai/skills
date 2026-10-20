@@ -20,6 +20,7 @@ Skills published by [5dive](https://5dive.ai?utm_source=github&utm_medium=referr
 | [`verify`](./verify) | Grade a delivered claim against the artifact instead of against the report of it. Split a claim into checkable assertions, grade each against a named instrument, and emit a three-state verdict — pass, fail, or not-reached — with what you did *not* check stated explicitly. |
 | [`deep-research`](./deep-research) | Run structured, multi-source research that produces a trustworthy, cited synthesized answer rather than a pile of links. Scope the question, fan out across sources, judge source quality, adversarially verify each key claim, separate fact from inference, and report with explicit confidence. |
 | [`zero-human-dev-team`](./zero-human-dev-team) | Every rule 5dive's AI coding team works by: tasks, code, tests, review, releases, backups, secrets, and how agents talk to each other and their human. |
+| [`caveman-marketing`](./caveman-marketing) | Cut an ad, landing page or signup flow down until a stranger gets it in 3 seconds: one picture, at most 15 words, one button. Ships a word-and-button checker and real before/afters. |
 
 ## Quick start (any coding agent)
 
@@ -36,6 +37,9 @@ npx skills add 5dive-ai/skills --skill loops
 
 # every rule our AI coding team works by
 npx skills add 5dive-ai/skills --skill zero-human-dev-team
+
+# make any ad, page or signup flow pass a 3-second glance
+npx skills add 5dive-ai/skills --skill caveman-marketing
 
 # or pull the whole set
 npx skills add 5dive-ai/skills --skill '*'

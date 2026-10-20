@@ -88,6 +88,20 @@
       "expect_selected": ["verify"],
       "expect_not_selected": ["code-review"],
       "assertions": ["Grading a claim with no diff to read selects verify, not code-review"]
+    },
+    {
+      "id": 13,
+      "prompt": "Our landing page gets plenty of visits but almost nobody clicks sign up. Make it so people get it at a glance.",
+      "expect_selected": ["caveman-marketing"],
+      "expect_not_selected": [],
+      "assertions": ["A page with views but no clicks that needs a glance-level rewrite selects caveman-marketing"]
+    },
+    {
+      "id": 14,
+      "prompt": "Write a 1,200-word sales page for our new bookkeeping course, with testimonials and an FAQ.",
+      "expect_selected": ["copywriting"],
+      "expect_not_selected": ["caveman-marketing"],
+      "assertions": ["Writing long persuasive copy from scratch selects copywriting, not caveman-marketing"]
     }
   ]
 }
