@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Caveman check: count every word on a screen, find its one button, flag tribe words.
+"""Caveman check: count every word on a screen, find its one button, flag tribe words,
+hold the headline to one sentence of at most 6 words.
 
     python3 check.py screens.txt [--max-words 15]      ('-' reads stdin)
 
@@ -9,7 +10,7 @@ Screen format (one file can hold a whole funnel):
     picture: <what it shows>   not counted, except words "in quotes" (they are on screen)
     [Button]                   the filled main button, counted
     (link)                     small grey text or a link, counted
-    anything else              on-screen text, counted
+    anything else              on-screen text, counted; the first line of it is the headline
 
 A word is anything with a letter or a digit in it, so "$24/month" is one word and
 emoji, arrows and circled step numbers (① ② ③) are none.
@@ -39,6 +40,7 @@ TRIBE_RE = re.compile(
     r"(?<![\w-])(" + "|".join(re.escape(w) for w in TRIBE_WORDS) + r")s?(?![\w-])", re.I
 )
 QUOTED_RE = re.compile(r"[\"“”]([^\"“”]+)[\"“”]")
+MAX_HEADLINE_WORDS = 6
 
 
 def is_word(token):
@@ -47,6 +49,11 @@ def is_word(token):
 
 def count_words(text):
     return sum(1 for t in text.split() if is_word(t))
+
+
+def count_sentences(text):
+    """Sentences end at . ! ? or … before a space or the end: "10.23" and "$24.99" end none."""
+    return sum(1 for t in re.split(r"(?<=[.!?…])\s+", text) if count_words(t))
 
 
 def parse(text):
@@ -59,7 +66,7 @@ def parse(text):
         if not line:
             continue
         if cur is None:
-            cur = {"name": f"screen {len(screens) + 1}", "picture": False, "shown": [], "buttons": []}
+            cur = {"name": f"screen {len(screens) + 1}", "picture": False, "shown": [], "buttons": [], "text": []}
             screens.append(cur)
         if line.startswith("#"):
             cur["name"] = line.lstrip("#").strip()
@@ -67,8 +74,13 @@ def parse(text):
             cur["picture"] = True
             cur["shown"] += QUOTED_RE.findall(line)
         else:
-            cur["buttons"] += re.findall(r"\[([^\]]+)\]", line)
+            buttons = re.findall(r"\[([^\]]+)\]", line)
+            cur["buttons"] += buttons
             cur["shown"].append(line)
+            link_only = re.search(r"\([^)]+\)", line) and not re.sub(r"\([^)]+\)", "", line).strip()
+            text = line.replace("👇", "").strip()
+            if not buttons and not link_only and count_words(text):
+                cur["text"].append(text)
     return screens
 
 
@@ -83,6 +95,14 @@ def grade(screen, max_words):
     tribe = sorted({m.group(1).lower() for m in TRIBE_RE.finditer(shown)})
     if tribe:
         fails.append("tribe words: " + ", ".join(tribe))
+    if screen["text"]:
+        headline = screen["text"][0]
+        n = count_words(headline)
+        if n > MAX_HEADLINE_WORDS:
+            fails.append(f'headline {n} words, max {MAX_HEADLINE_WORDS}: "{headline}"')
+        n = count_sentences(headline)
+        if n > 1:
+            fails.append(f'headline is {n} sentences, keep one: "{headline}"')
     if not screen["buttons"]:
         warns.append("no button (fine only on the last screen)")
     else:
