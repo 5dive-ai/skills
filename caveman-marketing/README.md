@@ -56,6 +56,19 @@ Look for 3 seconds, then cover the screen. Can you answer all three?
 `scripts/check.py` counts the words and buttons on each screen, because models miscount.
 How the skill runs is in [SKILL.md](SKILL.md), and every example is in [examples/](examples/).
 
+## Why it works
+
+**One screen. One clear action. Minimum decisions before the user gets value.**
+
+- **Hick's law** (Hick 1952, Hyman 1953). The time it takes to choose grows with the number of
+  choices, roughly with log₂(n + 1). Every extra button slows the decision down.
+- **Choice overload, the paradox of choice** (Iyengar & Lepper 2000, Schwartz 2004). With 6 jams
+  on the table, 30% of the shoppers who stopped bought one. With 24, 3% did. It hits hardest when options are hard
+  to compare and people don't know yet what they want (Chernev et al. 2015), which describes a
+  stranger on your landing page.
+- **Progressive disclosure.** Show only what this step needs, and reveal the rest later. That's
+  why a signup asks one thing per screen.
+
 <sub>The right-hand screens are mocks, not the companies' pages. Each keeps the company's own
 claims. Apple's picture is Apple's own photo; HubSpot's and Atlassian's are drawings. We're not
 affiliated with any company shown.</sub>
