@@ -69,6 +69,18 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
 
 The caveman grunts are only the test. The new copy is plain, normal English.
 
+## Why it works
+
+If someone asks why one button and 15 words, the answer is that every extra choice costs time
+and conversions:
+
+- **Hick's law:** decision time grows with the number of choices, roughly log₂(n + 1).
+- **Choice overload** (Iyengar & Lepper 2000; Chernev et al. 2015): too many options make people
+  choose nothing. It's strongest when they can't compare the options and don't know yet what they want.
+- **Progressive disclosure:** show what this step needs, and reveal the rest later.
+
+One screen. One clear action. Minimum decisions before the user gets value.
+
 ## How to run it
 
 Input: a URL, a screenshot or pasted copy of an ad, a page, or each step of a flow.
