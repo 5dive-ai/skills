@@ -48,13 +48,15 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
    label the picture.
 2. **15 words, max. 6 in the headline.** Count every word on the screen: headline, button,
    a field's placeholder, small links, the step bar, text inside the picture. Don't count
-   emoji, logos or the platform's own fixed text (browser bar, "Sponsored", a card form's own
-   field names).
+   emoji, logos or the platform's own fixed text (browser bar, "Sponsored", an ad's domain
+   line, a card form's own field names).
    The headline is one sentence that says what the site is and what it sells you, in words a
    stranger can picture: "A ring that tracks your sleep." Not a slogan, not "a clearer X", not
-   two of the page's taglines stitched together. Swap in another company's name: if the line
-   still fits, it says nothing ("All in one place."). Name the concrete thing instead
-   ("Meeting notes written for you."). Run the checker. Models and humans both miscount.
+   two of the page's taglines stitched together. Swap in a company from a different business:
+   if the line still fits, it says nothing ("All in one place."). Fitting a direct rival is
+   fine. Name the concrete thing instead ("Meeting notes written for you."). On a later
+   step of a flow, the headline says what this step does ("Pick a password."). Run the
+   checker. Models and humans both miscount.
 3. **One button.** Exactly one filled button, the biggest and brightest thing on the
    screen, with 👇 right above it. Everything else is small grey text. Three equal
    choices is a menu. The cookie banner never outshines it.
@@ -63,6 +65,9 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
    When the one action is typing (a search, an email, a web address), keep ONE field right
    above the button: the field and its button are the one action, and the field's
    placeholder words count.
+   When the step IS a choice (a language, a plan), the choices are the action: show the
+   ones most people pick as tiles, 6 at most, the rest behind a small (More). A tap on a
+   tile moves on, so the screen needs no button.
 4. **The button says what happens next, and the next screen keeps the promise.**
    "Get started" that opens a 15-question sales form breaks it. "Pick a time" that
    opens a calendar keeps it.
@@ -72,7 +77,8 @@ grunt test. This skill adds hard numbers and covers ads and funnels too.
    seamless, leverage, end-to-end, interoperability. Spell out an acronym unless the
    buyer says it every day. If a 10-year-old would ask "what's that?", cut it.
    Hype goes on sight: trusted, world's best, world-class, leading, #1, best-in-class,
-   powerful, revolutionary, next-gen, cutting-edge, innovative, all-in-one, ultimate.
+   powerful, revolutionary, next-gen, cutting-edge, innovative, all-in-one, ultimate,
+   no nonsense, hassle-free, effortless.
    Cutting it removes no fact, so "keep the real claims" never keeps it. "The world's best
    commerce platform" becomes what it is: "Sell online with your own store."
 7. **The hunt ends with meat.** A funnel ends on the moment the customer gets the thing:
@@ -109,7 +115,8 @@ Input: a URL, a screenshot or pasted copy of an ad, a page, or each step of a fl
 6. **Show BEFORE above AFTER**, same size, counts under each. If you can render images,
    render both. If not, the `picture:` line is the brief for whoever draws it.
 7. **Grunt the AFTER.** All three answers, in 3 seconds, or go back to step 4. Then swap
-   a competitor's name into the headline. If it still fits, it says nothing: back to step 4.
+   in a company from a different business. If the headline still fits, it says nothing:
+   back to step 4.
 
 ## Screen format
 
@@ -129,7 +136,8 @@ Search the web with Google.
 [Google Search]
 ```
 
-- `[...]` is the one filled button. `(...)` is small grey text or a link.
+- `[...]` is the one filled button. `(...)` is small grey text or a link, and the step bar.
+- `<...>` is one tile of a picker, its words counted: `<Spanish> <French> <German> (More)`.
 - `{...}` is one text field, its placeholder inside. Only when typing is the one action, and
   right above the button (a 👇 between them is fine).
 - `picture:` describes the picture. Only its words "in quotes" count, because they show
@@ -145,14 +153,27 @@ and exits non-zero if any screen fails. `scripts/test.sh` checks the checker.
 - **Ad.** One screen. The first line of the post text is all most people see, so it
   carries the grunt. Ad platforms make you pick the button label from a list: choose the
   one that names what happens (Download for a report, Sign up for a trial). Never paint a
-  second button with other words into the image.
+  second button with other words into the image. The ad's link is its next screen: it opens
+  where the button's promise happens (Sign up opens the sign-up page), never the homepage.
+  The picture shows the real product doing its job (for software, its own screen with the
+  result on it: the slot booked, the invoice paid), not a stock person or a drawn shape.
+  That screen's own small labels are part of the picture. Big words you add on top count.
+  Where the button sits beside the headline (Facebook, LinkedIn), a 👉 points at it. On
+  Instagram the caption sits under the picture, so the picture carries the grunt.
 - **Landing page.** The screen is the first view on a phone (390×844). The menu becomes
   one icon. Each screen further down follows the same rules and repeats the same button.
   On desktop the picture fills the left half, and the words, 👇 and button sit in the right
   half. Same copy, same 15-word cap.
 - **Funnel.** Every step is a screen, from the ad to the first win. Sign-in is one button
   ("Continue with Google") with email as a small link. A legal line the lawyers need is
-  one short grey line, and it counts.
+  one short grey line, and it counts. A consent the law requires (a marketing opt-in) stays,
+  unticked, in small grey text.
+- **App screen.** A screen someone asked for (search results, an inbox, a dashboard) keeps
+  its list, because the list is the answer. Cut what's around it: the repeated search form,
+  extra menus, a second button. Its rows keep the facts people choose by (times, prices,
+  warnings); the 15 words count only what's around them, so check the screen with the rows
+  left out. The full rules apply to the app's selling screens: first run, empty state,
+  upgrade, paywall.
 
 ## Report
 
@@ -161,11 +182,12 @@ BEFORE  62 words · 11 ways out · grunts: what ? · want ? · tap ?
 AFTER   14 words · 1 button   · grunts: what ✓ · want ✓ · tap ✓
 ```
 
-Then each screen, BEFORE above AFTER, and one line per rule the BEFORE broke.
+Then each screen, BEFORE above AFTER, and one line per rule the BEFORE broke. When screens
+merge, say which BEFORE screens each AFTER replaces.
 
 ## Examples
 
-`references/examples.md` walks through a LinkedIn ad, a homepage, a signup funnel and a
+Before your first rewrite, read `references/examples.md`. It walks through a LinkedIn ad, a homepage, a signup funnel and a
 search page, all real pages from big companies, each with its BEFORE and AFTER in
 `examples/`, plus a test run on the apple.com, hubspot.com and atlassian.com homepages
 (rendered in `README.md`).

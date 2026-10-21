@@ -42,6 +42,16 @@ expect 1 "hype fails: trusted" "picture: a bank card\nA bank trusted by millions
 expect 1 "hype fails: #1, and #1 is not a heading" "picture: a bike\n#1 bike shop 👇\n[Buy now]\n"
 expect 1 "hype fails in quoted picture words" "picture: a box \"All-in-one\"\nA box for your tools 👇\n[Buy now]\n"
 expect 1 "hype fails: Leading, any case" "picture: a bike\nLeading bikes for kids 👇\n[Buy now]\n"
+expect 1 "hype fails: no nonsense, an empty claim" "picture: a car\nLease a new car, no nonsense 👇\n[See cars]\n"
+expect 1 "hype fails: hassle-free" "picture: a van\nHassle-free moving vans 👇\n[Book a van]\n"
 expect 0 "hype is whole words only: misleading and #10 pass" "picture: a bike\nNo misleading prices, #10 bike 👇\n[Buy now]\n"
+# A picker: the tiles are the action, counted, 6 at most, and a tile screen needs no button.
+expect 0 "picker of 5 tiles passes with no button" "(① Language › ② Lesson)\npicture: Duo with a flag\nPick a language.\n<Spanish> <French> <German> <Japanese> <Korean> (More)\n"
+expect 1 "picker of 7 tiles fails" "picture: flags\nPick a language.\n<Spanish> <French> <German> <Japanese> <Korean> <Hindi> <Italian>\n"
+expect 0 "tile words count: 13 + 2 tiles pass" "picture: flags\n$thirteen\n<Spanish> <French>\n"
+expect 1 "tile words count: 13 + 3 tiles fail" "picture: flags\n$thirteen\n<Spanish> <French> <German>\n"
+expect 0 "a tile line is never the headline" "picture: flags\n<Learn Spanish now> <Learn French now> <Learn German now>\nPick one.\n"
+# Meta puts the button beside the headline: a 👉 there is fine.
+if printf '%b' "picture: a bag of coffee\nFresh coffee every month 👉\n[Subscribe]\n" | python3 scripts/check.py - | grep -q "no 👇"; then fail=$((fail + 1)); echo "FAIL 👉 still warns"; else pass=$((pass + 1)); fi
 echo "$pass pass, $fail fail"
 [ "$fail" = 0 ]

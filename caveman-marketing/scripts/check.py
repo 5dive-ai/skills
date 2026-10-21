@@ -11,9 +11,11 @@ Screen format (one file can hold a whole funnel):
     picture: <what it shows>   not counted, except words "in quotes" (they are on screen)
     [Button]                   the filled main button, counted
     {placeholder}              one text field (a search, an email), its placeholder counted
+    <Tile>                     one tile of a picker (a language, a plan), counted; 6 at most
     (link)                     small grey text or a link, counted
     anything else              on-screen text, counted; the first line of it is the headline
-    👇                         may sit between the field and the button
+    👇                         may sit between the field and the button (👉 when the
+                               button sits beside the headline, as on Facebook)
 
 A word is anything with a letter or a digit in it, so "$24/month" is one word and
 emoji, arrows and circled step numbers (① ② ③) are none.
@@ -39,6 +41,7 @@ TRIBE_WORDS = [
 HYPE_WORDS = [
     "trusted", "world's best", "world-class", "leading", "#1", "best-in-class", "powerful",
     "revolutionary", "next-gen", "cutting-edge", "innovative", "all-in-one", "ultimate",
+    "no nonsense", "no-nonsense", "hassle-free", "effortless", "effortlessly",
 ]
 WEAK_BUTTONS = {
     "click here", "continue", "discover", "explore", "find out more", "get started", "go",
@@ -53,6 +56,8 @@ HYPE_RE = re.compile(
     r"(?<![\w-])(" + "|".join(re.escape(w).replace("'", "['’]") for w in HYPE_WORDS) + r")(?![\w-])", re.I
 )
 FIELD_RE = re.compile(r"\{([^}]*)\}")
+TILE_RE = re.compile(r"<([^<>]+)>")
+MAX_TILES = 6
 QUOTED_RE = re.compile(r"[\"“”]([^\"“”]+)[\"“”]")
 MAX_HEADLINE_WORDS = 6
 
@@ -80,7 +85,7 @@ def parse(text):
         if not line:
             continue
         if cur is None:
-            cur = {"name": f"screen {len(screens) + 1}", "picture": False, "shown": [], "buttons": [], "text": [], "lines": []}
+            cur = {"name": f"screen {len(screens) + 1}", "picture": False, "shown": [], "buttons": [], "text": [], "lines": [], "tiles": []}
             screens.append(cur)
         # A heading is "#" then a space: "#1 bike shop" is a line of the screen.
         if re.match(r"#+(\s|$)", line):
@@ -91,12 +96,13 @@ def parse(text):
         else:
             buttons = re.findall(r"\[([^\]]+)\]", line)
             fields = FIELD_RE.findall(line)
+            cur["tiles"] += TILE_RE.findall(line)
             cur["buttons"] += buttons
             cur["shown"].append(line)
             cur["lines"].append({"line": line, "buttons": len(buttons), "fields": len(fields)})
             link_only = re.search(r"\([^)]+\)", line) and not re.sub(r"\([^)]+\)", "", line).strip()
             text = line.replace("👇", "").strip()
-            if not buttons and not fields and not link_only and count_words(text):
+            if not buttons and not fields and not link_only and not TILE_RE.search(line) and count_words(text):
                 cur["text"].append(text)
     return screens
 
@@ -136,6 +142,8 @@ def grade(screen, max_words):
     if hype:
         fails.append("hype words, say what it is instead: " + ", ".join(hype))
     fails += field_fails(screen)
+    if len(screen["tiles"]) > MAX_TILES:
+        fails.append(f"{len(screen['tiles'])} tiles, show the {MAX_TILES} most people pick and put the rest behind (More)")
     if screen["text"]:
         headline = screen["text"][0]
         n = count_words(headline)
@@ -145,9 +153,10 @@ def grade(screen, max_words):
         if n > 1:
             fails.append(f'headline is {n} sentences, keep one: "{headline}"')
     if not screen["buttons"]:
-        warns.append("no button (fine only on the last screen)")
+        if not screen["tiles"]:
+            warns.append("no button (fine only on the last screen)")
     else:
-        if "👇" not in shown:
+        if "👇" not in shown and "👉" not in shown:
             warns.append("no 👇 above the button")
         label = screen["buttons"][0].strip().lower()
         has_field = any(l["fields"] for l in screen["lines"])
