@@ -158,8 +158,10 @@ and exits non-zero if any screen fails. `scripts/test.sh` checks the checker.
   The picture shows the real product doing its job (for software, its own screen with the
   result on it: the slot booked, the invoice paid), not a stock person or a drawn shape.
   That screen's own small labels are part of the picture. Big words you add on top count.
-  Where the button sits beside the headline (Facebook, LinkedIn), a 👉 points at it. On
-  Instagram the caption sits under the picture, so the picture carries the grunt.
+  Where the button sits beside the headline (Facebook, LinkedIn), a 👉 points at it. The
+  platform draws that button small and grey, so "biggest and brightest" can't apply: the
+  👉 and the headline next to it do the pointing. On Instagram the caption sits under the
+  picture, so the picture carries the grunt.
 - **Landing page.** The screen is the first view on a phone (390×844). The menu becomes
   one icon. Each screen further down follows the same rules and repeats the same button.
   On desktop the picture fills the left half, and the words, 👇 and button sit in the right
