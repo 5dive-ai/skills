@@ -4,8 +4,10 @@ description: >-
   Cut an ad, landing page, signup flow or any single screen down until a
   stranger gets it in 3 seconds: one picture, at most 15 words, one button.
   Use when a page, ad or funnel is wordy, unclear, gets views but no clicks,
-  or has no obvious next click; for writing long persuasive copy from scratch,
-  use copywriting instead.
+  or has no obvious next click, for a website redesign or landing page and ad
+  ideas, when someone asks to "simplify this page", "make it simpler" or "make
+  it shorter", and whenever someone asks to "caveman" something. For long
+  persuasive copy written from scratch, use copywriting instead.
 ---
 
 # Caveman marketing
