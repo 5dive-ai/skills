@@ -18,7 +18,8 @@ with `5dive agent list --json`, then `agent send` / `agent ask`.
 
 Also fires for filing and tracking shared work (`5dive task add/ls/done`),
 the org chart (`5dive org tree`), parking a blocking question on a human
-(`task need`), and a quick recall of team memory (`5dive memory search`).
+(`task need`), a quick recall of team memory (`5dive memory search`), and
+packing an agent up to back it up, hand it over or move it (`agent export`).
 
 Does **not** fire for ordinary local coding on this box — editing files,
 running a build, running tests, debugging your own program. Nothing about a
@@ -524,6 +525,38 @@ new one anyway. A spent link opens a "This request is closed" page.
 **A throwaway key may come by chat:** a free-tier or test key, one the owner says
 is disposable, or a value that isn't secret. When unsure, use the link. Never
 echo, log or commit a key either way.
+
+### Back up, hand over or move an agent: `agent export`
+
+Asked to "pack yourself up", back up, clone or move an agent? Do not tar
+files by hand. One command does it, in two steps (it is a review flow):
+
+```bash
+sudo 5dive agent export <name> --memory=raw --audience=self
+#   -> writes a memory DRAFT and prints its dir. Nothing is packed yet.
+sudo 5dive agent export <name> --memory=raw --audience=self \
+     --approve-memory=<draft dir> -o <name>.tar.gz
+#   -> the pack. Attach this file. Keep the two flags on step 2: the
+#      SEAL hint step 1 prints leaves them out, and without them the
+#      seal keeps only reference/project facts.
+```
+
+What is in it: CLAUDE.md, persona, config (model, effort, plugins, hooks),
+skill bodies and the whole memory folder. What is not, on purpose: session
+logs (they hold private chats) and the agent's own tokens and logins (the new
+seat gets its own at `agent import`). Nothing is silently scrubbed: anything
+that looks like a key is named by file and line, and the pack is refused
+until you remove it.
+
+- No memory flag = config and persona only.
+- `--with-memory` is the *publishable* pack, not a backup: only
+  reference/project facts, private ones left out, and the default
+  `--audience=publish` refuses on host paths, names or ids.
+- `--memory=raw` refuses without `--audience=self`. A self pack is private:
+  never publish it.
+- `--format=agents-md` writes one AGENTS.md file instead of a tarball.
+
+Restore with `sudo 5dive agent import <file> --as=<new name>`.
 
 ### Search team memory before re-deriving
 

@@ -137,8 +137,13 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
 5dive agent stop    <name>
 5dive agent restart <name> [--defer]          # --defer = internal systemd-run restart (no raw grant)
 5dive agent rm      <name>                    # `agent fire` / top-level `5dive fire` are aliases
-5dive agent export  <name> [--with-memory] [--approve-memory=<dir>] [--out=<path>]
-                                              # dump an agent to a persona pack tarball
+5dive agent export <name> [--format=pack|agents-md] [--with-memory] [--memory=distilled|raw] [--approve-memory=<dir>] [--audience=publish|self] [-o <path>]
+                                              # pack an agent up (tarball, or one AGENTS.md file)
+                                              # --memory: distilled (default; reference/project facts only)
+                                              #   or raw (whole memory dir, needs --audience=self); both
+                                              #   draft first, then seal with --approve-memory=<draft dir>
+                                              # --audience: publish (default; refuses host paths, names,
+                                              #   ids in memory) or self (own backup, never publish)
 5dive agent marketplace [ls]                  # packs published from this box
 5dive agent _svc <start|stop|restart> <unit>  # scoped service lifecycle, 5dive-owned units only
                                               # (root; replaces raw systemctl in the admin sudoers — sudo-rs safe)
