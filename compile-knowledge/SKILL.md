@@ -39,13 +39,17 @@ agent gets smarter over time instead of relearning the same things.
   survives restarts — it's the karpathy "external memory" that keeps you sharp
   across sessions. Governed by the memory rules already in your system prompt —
   follow them. For most agents this is the only store you need.
-- **Shared wiki** (only if you work as a team): a `wiki/` folder in your project
-  with a `wiki/index.md`. For knowledge the *whole team* benefits from — domain
-  facts, research findings, reference material multiple agents would re-derive.
-  Skip this entirely if you're a solo agent; don't manufacture team ceremony.
+- **Team wiki** (when other agents share your box): what the whole team should
+  know about the owner's business — customers, prices, suppliers, decisions, how
+  the owner likes things done. Publish it with
+  `5dive memory add --store=wiki --name=<slug> --description="<one line>"`
+  (the body on stdin); that writes the file and its index line, and every
+  colleague's `5dive memory search` finds it. Don't keep a `wiki/` folder in your
+  project instead: no other agent's search reads it. Skip this if you are the
+  only agent; don't manufacture team ceremony.
 
 Rule of thumb: "only I act on this" → memory. "Anyone on my team might need
-this" → shared wiki. Cross-link between them with `[[slug]]` when they relate.
+this" → team wiki. Cross-link between them with `[[slug]]` when they relate.
 
 ## The async pipeline vs. you — division of labor
 
@@ -81,8 +85,9 @@ than nothing; it pollutes recall.
 
 ## The procedure
 
-1. **Search first.** Look for an existing file on this topic (grep the store +
-   skim the index). If one exists, edit it — never create a near-duplicate.
+1. **Search first.** Look for an existing file on this topic (on 5dive,
+   `5dive memory search "<topic>"` reads your store and the team wiki). If one
+   exists, edit it — never create a near-duplicate.
 2. **Atomic.** One fact / one topic per file. If you're tempted to add a second
    unrelated fact, that's a second file.
 3. **Name it.** kebab-case slug, with a type prefix for memory
@@ -94,9 +99,9 @@ than nothing; it pollutes recall.
    liberally; a link to a file that doesn't exist yet is a fine TODO marker. For
    `feedback`/`project`, follow with **Why:** and **How to apply:** lines.
 6. **Index.** Add or update a ONE-LINE pointer in the index (`MEMORY.md` for
-   memory; `wiki/index.md` for the wiki): `- [Title](slug.md) — hook`. Keep it
-   under ~200 chars; detail lives in the file, never the index. **If the wiki
-   `index.md` doesn't exist yet, create it** so the store stays discoverable.
+   memory; `5dive memory add` writes the team wiki's line for you):
+   `- [Title](slug.md) — hook`. Keep it under ~200 chars; detail lives in the
+   file, never the index.
 7. **Hygiene.** Delete files that turned out wrong. Convert relative dates to
    absolute. If the index is getting long, tighten lines — don't let it bloat.
 
