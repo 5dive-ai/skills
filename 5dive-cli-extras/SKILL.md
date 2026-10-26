@@ -47,7 +47,8 @@ the basic task queue. This skill is the administration surface on top of it:
   single attempt at one task (`5dive run`).
 - **Delivery and comms** — a delegated GitHub push-for-review (`5dive push`),
   Telegram/Discord pairing and shared team-bot setup, the nostr handset rail
-  (`5dive buzz`, `agent buzz enable`), installing and rolling back plugins
+  (`5dive buzz`, `agent buzz enable`, from the buzz plugin since 0.102.0),
+  installing and rolling back plugins
   (`5dive plugin`, `5dive market --kind=plugin`).
 
 
@@ -123,7 +124,9 @@ by itself when it adopts a persona's signing key; a failed vouch only warns.
 `agent clone <src> <dst>` copies an existing agent's type/config into a new
 one. `--with-skills=<spec>[,<spec>...]` (bare id or `<owner/repo>:<id>`) /
 `--no-skills` control what a spawned child inherits (defaults to the
-`5dive-cli` skill when the caller is another agent); `--inherit-memory=<scope>`
+`5dive-cli` skill when the caller is another agent; since 0.98.0 `--no-skills`
+skips the default skills too, and the nightly skill refresh leaves that seat
+alone); `--inherit-memory=<scope>`
 seeds recall from `wiki`, a sibling `<agent-name>`, or `all`/`team`;
 `--no-team-bot` opts a new no-bot agent out of the shared team bot.
 
@@ -184,6 +187,12 @@ sudo 5dive agent pack-sync worker-1 --dry-run
 sudo 5dive agent pack-sync --all [--no-restart]
 ```
 
+Since 0.99.0 (DIVE-6796) a pack skill arrives whole, with its scripts,
+`references/` and `evals/`, not just `SKILL.md`. `pack-sync` (also run by the
+nightly update) copies an existing agent's missing pack-skill files back in,
+never overwrites a file the agent has, and reports those skills as
+`backfilled`.
+
 ### Recover from `auth_required`
 
 ```bash
@@ -211,6 +220,7 @@ different ones.
 ```bash
 sudo 5dive account list --json           # which accounts exist, types, agents bound
 sudo 5dive account usage --json          # per-account 5h/7d rate-limit headroom
+sudo 5dive account poll                  # read every Claude account's 5h/7d now (no seat turn)
 sudo 5dive account show acme-prod --json # detail incl. which env keys are populated
 
 sudo 5dive account add acme-prod         # provision empty, then sign in (TTY-only)
@@ -235,6 +245,13 @@ agent level, `auth-profile=default` means "no override, use the shared
 quota for a failure or moving agents between accounts. A standard seat that
 holds the self-account grant runs `account list` and `account usage` without
 sudo, over that rail (since 0.94.0, DIVE-6430); one without it is still refused.
+
+`account usage` used to show only what a busy seat last saw. With
+`5dive config account-poll=on` (off by default; since 0.97.0, DIVE-6713) the
+heartbeat reads every Claude account's 5h/7d about every 10 minutes, in no seat.
+The table gains BURN/H, SEATS and the reading's age. A login the provider
+refuses shows `stale` with its reason and last numbers, never 0%. Nothing
+switches accounts on its own.
 
 #### Rotation: move a seat to an account with room
 
@@ -313,7 +330,15 @@ sudo 5dive agent telegram-access get worker-1 --json
 echo '{"dmPolicy":"allowlist","allowFrom":[1234567890],"groups":{}}' \
   | sudo 5dive agent telegram-access set worker-1
 sudo 5dive agent config worker-1 set telegram.allowed-users=1234567890,5551234  # shortcut
+sudo 5dive agent telegram-access groups worker-1 [--answer=name|every] [--names="Оля,Liv"]
+sudo 5dive agent telegram-access seed-names [worker-1]   # add the persona card name, once
 ```
+
+`groups` (since 0.96.0 to 0.98.0, DIVE-6675/6684/6729) sets how the agent answers
+in its groups: when called by name (the default) or every message. `--names=`
+writes EVERY name it answers to, its bot name included, and replaces the list.
+An empty `--names=` leaves only an @mention or a reply. `seed-names` adds the
+card name once and never re-adds one the owner removed.
 
 A group chat the bot should reply in must be present in `groups{}` — without
 it, replies into that group are dropped.
@@ -420,6 +445,9 @@ sudo 5dive team import startup --lang=ru --json
 # may carry a signed `pack_url:`. Every link is fetched before any agent is
 # created, so one refused link leaves nothing half-made.
 sudo 5dive team import acme --template=./team.yaml --json
+# A team file may name its pushers (since 0.94.2, DIVE-6543): once any seat
+# declares `can_push: true|false`, a seat without `true` gets no push grant.
+# A pack seat also gets its template's extra skills (since 0.102.0, DIVE-6900).
 
 # One character is one agent per box (DIVE-5769): a seat whose persona is
 # already here is filled by that agent, even when he is in another team. He is
@@ -496,6 +524,10 @@ over a task with a live `task need` gate.
 A row can be BORN held or parked, in the same write, so no heartbeat tick can
 start it first (DIVE-5729): `task add ... --held-by=DIVE-40` (blocked behind
 that row, freed when it closes) or `--park="<why>" --park-wake=+3d`.
+Since 0.99.0 (DIVE-6807) `--park-wake` takes `+Nm`, `+Nh`, `+Nd` or a wall-clock
+`'YYYY-MM-DD HH:MM'` read in `--tz=<zone>` (default: the box's zone). That is the
+one-off reminder. A past time, `--tz` on a relative wake and `--park-wake` with
+`--recurring` are refused.
 
 **`--type=access` gates** are for "I'm blocked on a permission I don't
 have" — pair with `--probe=<cmd>` (a self-check that must currently FAIL, so
@@ -544,6 +576,7 @@ A recurring **template** materializes into a normal todo on schedule; the
 # The cron is read in the BOX's time zone (since 0.85.0, DIVE-5913); --tz=<zone>
 # picks another. Older templates stay UTC until moved:
 5dive task set-tz <template> box     # or an IANA zone: Asia/Bangkok, UTC, ...
+# No --assignee? Since 0.99.0 (DIVE-6804) the filing agent owns the template.
 
 sudo 5dive heartbeat on worker-1 --every=30m   # default every=30m; fresh sends /clear per task
 sudo 5dive heartbeat ls              # enrolled agents + next wake + queued count
@@ -551,6 +584,10 @@ sudo 5dive heartbeat ls              # enrolled agents + next wake + queued coun
 # path — how an incident row gets a grader without waiting its turn in the queue.
 sudo 5dive heartbeat wake-task [--fresh|--no-fresh] <agent> <task_id> [<ident>]
 sudo 5dive heartbeat off worker-1
+# since 0.101.0 (DIVE-6853): the cron that runs the tick at all. install.sh and
+# `agent create` add it on a self-installed box; it skips a box that has one.
+sudo 5dive heartbeat install
+sudo 5dive heartbeat uninstall
 ```
 
 Enrolment uses the agent's short name, the same name `task --assignee`
@@ -887,6 +924,7 @@ sudo 5dive plugin upgrade <plugin>[@<marketplace>]
 sudo 5dive plugin remove <plugin>[@<marketplace>]
 sudo 5dive plugin enable|disable <plugin>    # a flag flip; the code stays on disk
 sudo 5dive plugin rollback <plugin> [<version>]
+sudo 5dive plugin auto-upgrade               # what self-update runs (official plugins only)
 sudo 5dive plugin marketplace add <local-path|owner/repo[@ref]|git-url> [--as=<name>]
 sudo 5dive plugin marketplace remove <name>
 5dive plugin marketplace list --json
@@ -917,6 +955,22 @@ reports the pin it read back (`re-pinned 1.39.0 -> 1.41.0`); a seat still below
 the box's version counts as failed. It does not restart seats: a seat whose
 running session has the old version loaded is named with the `5dive agent
 restart` that loads the new one.
+
+Since 0.95.0 (DIVE-6650) an upgrade keeps the newest 3 versions of that plugin
+and deletes the rest, never the enabled one or one an agent still pins
+(`FIVEDIVE_PLUGIN_KEEP_VERSIONS` changes the count). Since 0.94.3 (DIVE-6618)
+self-update runs `plugin auto-upgrade`: each official plugin moves to the
+newest marketplace version, never downwards and never while disabled.
+Community plugins are only reported. `update --check` lists box plugins that
+are behind (`hostPluginsBehind` in `--json`).
+
+**The devteam plugin may replace core's dev-team code** (since 0.102.1,
+DIVE-6935/6959). With `devteam@5dive-plugins` installed, 5dive runs that
+plugin's copy of the `gh`, `push`, `deploy`, PR-delivery and grader modules.
+Only that official plugin may: it must be enabled, declare the `core`
+capability and ship root-only files. Any other plugin declaring `core` is
+refused at install. `5dive doctor --category=plugins` says which copy this
+box runs, and `FIVEDIVE_DEVTEAM=0` skips the plugin for one run.
 
 ## Is a seat actually alive? `5dive liveness` (DIVE-3778)
 
@@ -1001,6 +1055,12 @@ enters argv. `--where` is the filter that decides which deliveries become rows;
 `--max-pending` is the backstop against a loud repo filling the queue.
 
 ## The nostr handset rail: `5dive buzz`
+
+Since 0.102.0 (DIVE-6934) these commands come with the buzz plugin:
+`sudo 5dive plugin install buzz` (`install` is an alias of `add`). Without it,
+every buzz command answers `Buzz is a plugin now: 5dive plugin install buzz`.
+Core keeps `buzz` as a channel name, and a seat's `agent send` is no longer
+echoed into its buzz room.
 
 Pairing is **per SERVER** — one QR pairs the phone as the OWNER of this box,
 and that identity is wired into every buzz agent's channels:
@@ -1225,7 +1285,7 @@ sudo 5dive doctor --json
 Envelope is always `{ ok: true, data: { summary, checks } }` with exit 0.
 Branch on `data.summary.errors > 0`. Add `--fix` (alias `--repair`) to
 attempt reversible fixes; `--dry-run` previews them. Narrow with
-`--category=deps|types|auth|creds|registry|shelld|channels|host|memory`.
+`--category=deps|types|auth|creds|registry|shelld|channels|host|memory|mod|policy|plugins|caps|models`.
 
 ```bash
 5dive selfcheck --json                # proves gate delivery, audit log, bundle integrity,
@@ -1248,12 +1308,20 @@ DIVE-6382): `agent stop` it if the park is real, `agent start` if stale.
 `5dive self-update` upgrades the CLI + plugins and **restarts every agent on
 the host** — never run it casually from an agent session.
 
+On a self-hosted box, `sudo 5dive self-update --on` (since 0.99.0, DIVE-6799)
+turns on nightly updates: an hourly timer installs a version between 01:00 and
+06:00 local time, and only after 5dive's fleet has served it for 24 hours.
+`--off` removes it; `5dive self-update --status` says whether it is on and what
+the last run did. Every self-update also moves a seat still on a model 5dive
+pinned (a current or previous default) to the bare family alias, so it follows
+each Claude release (DIVE-6788). A model somebody chose is left alone.
+
 ## Reference
 
 See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.94.1** (commit `ebbb4588`, 2026-10-19). A given box's
+_Synced to 5dive CLI **0.102.2** (commit `46c65af9`, 2026-10-26). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
