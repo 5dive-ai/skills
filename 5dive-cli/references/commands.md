@@ -2,8 +2,9 @@
 
 Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
-Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
-**since 0.32.0** changed shape after the 0.27.1 sync.
+Full sweep at CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
+**since 0.32.0** changed shape after the 0.27.1 sync; later weekly resyncs (the
+latest at **0.102.2**, 2026-10-26) add lines marked with their own version.
 
 ## Top-level
 
@@ -46,6 +47,9 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
                                                # --connector=tools lands it in every agent's env (tools.sh)
 5dive secret link <DIVE-N> [--ttl=<minutes>]   # root-only: mint a one-time https link for an open secret
                                                # gate; the owner pastes there, the gate clears (30 min default)
+5dive secret link --save=<name> [--ttl=<minutes>]   # since 0.101.0: a login for agents to type into a site,
+                                               # no task; a new link for a saved name replaces the value
+5dive secret saved [ls] [--json] | rm <name>   # saved names, never a value; root-only
 5dive tool ls [--json] | set <tool> | rm <tool>   # keys every agent sees as env vars (GH_TOKEN, FAL_KEY, AWS_*…);
                                                # set/rm root-only, values on stdin
 5dive tool google start|poll|submit|cancel ...  # root-only: Google signs in instead of taking a key (DIVE-5934)
@@ -58,6 +62,7 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
 5dive trigger    add|ls|show|deliveries|rotate|enable|disable  # signed external events -> ordinary tasks
 5dive host       unit|journal|cron ...               # hardened host remediation under the CLI-root grant
 5dive buzz       pair [--timeout=<s>] | owner [--envelope]     # ONE QR per SERVER: pair the phone as box OWNER
+                                                               # since 0.102.0 needs `5dive plugin install buzz`
 5dive ui         [--port=8735] [--host=127.0.0.1]    # local web UI: org chart, queue, gates (read-only, no sign-in)
 5dive acp                            # speak ACP over stdio, spawned BY a client (Buzz, Zed) — not interactive
 5dive watch [--interval=N]           # htop-style live view (interactive TTY)
@@ -75,6 +80,7 @@ Synced to CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
 5dive --version
 5dive update --check                 # read-only: behind/stale? (no root)
 5dive self-update                    # upgrade CLI + plugins, RESTARTS ALL AGENTS (alias: update)
+5dive self-update --on|--off | --status   # since 0.99.0: nightly updates on a self-hosted box (off by default)
 5dive uninstall [--purge] [--yes]    # remove 5dive (--purge also wipes state + user)
 5dive init                           # interactive first-run wizard
 5dive --help | -h | help
@@ -120,7 +126,7 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                      #   user) on a seat of ANY tier — wider than `admin`, which is the
                                      #   5dive CLI as root only. Managed, visudo-checked drop-in; stamps
                                      #   the seat `beyond-admin` so `agent info` agrees; audited.
-                                     #   NO REVOKE VERB YET — one-way.
+                                     #   Since 0.94.0 `grant <name> admin` narrows it back (DIVE-6410).
 5dive agent grant <name> <merge|push|deploy>  # since 0.32.0 (DIVE-4183), root: re-render an existing
                                              # STANDARD seat's managed sudoers from the current template so
                                              # it gains a capability added AFTER it was created. Idempotent;
@@ -240,6 +246,10 @@ the hood — `agent inspect <slug>` first for the full disclosure.
 5dive agent telegram-info     <name> [--refresh]              # name-based getMe; caches botUsername in registry
 5dive agent telegram-access get <name>                        # read access.json (DM policy, allowlist, groups)
 5dive agent telegram-access set <name>                        # write access.json from JSON on stdin; live, no restart
+5dive agent telegram-access groups <name> [--answer=name|every] [--names=<a,b,...>]
+                                                              # since 0.96.0: answer by name or every message; --names
+                                                              # is EVERY name it answers to (empty: @mention/reply only)
+5dive agent telegram-access seed-names [<name>]               # add the persona card name once; never re-adds a removed one
 5dive agent telegram-pending-ignore <name> <code>             # drop a pending pairing without approving
 5dive agent telegram-resolve-handle <name> <@handle>          # getChat — {id, isBot, displayName}
 5dive agent topic get|set <name> [--thread-id=N --chat-id=N]  # per-agent forum topic (team-bot mode)
@@ -291,6 +301,8 @@ anything blocks on stdin until the caller's timeout.
 5dive account list                                   # name, types signed in, # agents bound
 5dive account show   <name>                          # detail incl. envKeys present
 5dive account usage                                  # per-account 5h/7d rate-limit headroom
+5dive account poll                                   # since 0.97.0: read each Claude account's 5h/7d now;
+                                                     # the heartbeat does it every 10 min with account-poll=on
 5dive account add    <name>                          # create empty account; sign in next
 5dive account login  <name> --type=<type>            # TTY-only interactive login into an account
 5dive account rename <old> <new>                     # repoints + restarts every bound agent
@@ -457,7 +469,9 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
 5dive task cancel <id|DIVE-N> [--result=<text>] [--keep-worktree]   # -> cancelled; --result captures why
 5dive task verify <id|DIVE-N> [--cmd="<cmd>"] [--no-done] [--timeout=<s>]
                                              # run a check; exit 0 => proven-done (flips to done)
-5dive task reject <id|DIVE-N> --feedback="FINDING/FIX/VERIFY"   # verifier FAIL: bounce to maker; escalate at
+5dive task reject <id|DIVE-N> --feedback="FINDING/FIX/VERIFY" [--merge-conflict]   # verifier FAIL: bounce to maker; escalate at
+                                             # --merge-conflict (since 0.98.0, DIVE-6753): the merger's bounce of a
+                                             # PASSED delivery that only conflicts; not counted toward max_iterations
                                              # max-iters. **since 0.32.0 (DIVE-4144): --feedback is REQUIRED and
                                              # must name a FIX**, not just a finding — a reject that only says
                                              # what is wrong is refused. `--no-fix="<why>"` is the audited escape
@@ -1053,6 +1067,7 @@ uses the agent's **short name** (the same one `task --assignee` expects).
 ```
 5dive heartbeat on  <name> [--every=<dur>] [--no-fresh]   # enrol; default 30m, fresh on
 5dive heartbeat off <name>                                # stop waking (keeps settings)
+5dive heartbeat install | uninstall                       # since 0.101.0, root: the cron that runs the tick (every 5 min)
 5dive heartbeat ls                                        # enrolled + next-wake + queued count
 5dive heartbeat tick                                      # root cron driver — wired at provision; don't call
 5dive heartbeat wake-task [--fresh|--no-fresh] <agent> <task_id> [<ident>]
@@ -1384,8 +1399,9 @@ fails the whole view.
 5dive doctor --category=<c>                    # deps|types|auth|creds|registry|shelld|channels|host|memory
                                                #   auth probes each (type, auth profile) a seat runs on,
                                                #   reported as auth/<type>:<profile> (DIVE-5957)
-5dive update --check [--json]                  # behind/stale? read-only, no root
+5dive update --check [--json]                  # behind/stale? read-only, no root; lists box plugins behind
 5dive self-update                              # upgrade CLI + plugins; RESTARTS every agent
+5dive self-update --on|--off | --status        # since 0.99.0: nightly updates on a self-hosted box
 5dive uninstall [--purge] [--yes]              # remove 5dive (--purge also wipes state + user)
 5dive watch [--interval=N]                     # live fleet view; ↑↓ select, ↵ attach, q quit
 ```

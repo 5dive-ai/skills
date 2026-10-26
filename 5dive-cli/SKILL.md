@@ -32,7 +32,8 @@ digest/usage/supervisor/fleet/diagnose, Telegram pairing, the persona market,
 BYO providers, the company wizard, plugins (`5dive plugin`), seat liveness
 (`5dive liveness`), gate owners (`5dive human`), per-attempt run history
 (`5dive run`), event triggers (`5dive trigger`), host remediation
-(`5dive host`) and the nostr handset rail (`5dive buzz`) — see the
+(`5dive host`) and the nostr handset rail (`5dive buzz`, from the buzz plugin
+since 0.102.0) — see the
 `5dive-cli-extras` skill.
 
 **Chat context is forwarded, never relayed.** When a request arrived over a
@@ -94,7 +95,8 @@ Everything the CLI does maps onto these resources on the host:
   only, token-free) is web-dashboard chat and is folded into every claude create
   by default — `--channels=none` opts out. `buzz` is the nostr handset rail and
   is **claude-only**; it is wired by `agent buzz enable`, not by a token (see
-  `5dive-cli-extras`).
+  `5dive-cli-extras`). Since 0.102.0 (DIVE-6934) the buzz commands come with
+  `sudo 5dive plugin install buzz`; core keeps only the channel name.
 - The CLI is idempotent and safe to call from another agent, but **`sudo` is
   gated by isolation tier** (DIVE-1002). New agents default to `standard` —
   zero sudo. Only the first agent on a fresh box, or one created with
@@ -163,6 +165,13 @@ sudo 5dive agent logs worker-1 --tmux --lines=80
 sudo 5dive agent rm worker-1 --json
 # `5dive fire worker-1` is an alias of `agent rm` (same guarded teardown).
 ```
+
+**An agent cannot build a new agent on the box's free demo AI** (since 0.101.0,
+DIVE-6843). `agent create` refuses `--auth-profile=demo-ai`, or its key under
+another name, when an agent calls it through `sudo`. Create the agent with
+`--defer-auth` and send the owner the sign-in link from `agent auth start`
+instead. `--no-skills` also skips the default skills (5dive-cli,
+compile-knowledge) since 0.98.0 (DIVE-6751).
 
 `agent info <name>` shows the resolved type, CLI version, model and channel
 state for one agent. For personas off the agent market, BYO-provider keys,
@@ -379,6 +388,13 @@ command spends nothing), and bare `--verify` is the one way to buy a single row
 back on such a box. See `5dive-cli-extras` for the rail itself, projects,
 recurring work, and loops.
 
+**A one-off reminder is one parked row, never a `--recurring` cron** (since
+0.99.0, DIVE-6807). "Remind me in 10 minutes" is
+`5dive task add "<what>" --park="reminder" --park-wake=+10m --assignee=<you>`:
+the heartbeat unparks it at that minute and hands it to you. `--park-wake` takes
+`+Nm`, `+Nh`, `+Nd` or `'YYYY-MM-DD HH:MM'`, read in `--tz=<zone>` (default: the
+box's zone); `task park --wake` takes `+Nm` too.
+
 ### Park a question on a human: `task need`
 
 When a task is blocked on something only a human can provide, don't sit on
@@ -521,6 +537,14 @@ cannot: point the owner to the "Open secure link" card in the Telegram Mini App.
 Since 0.91.0 (DIVE-6205) a gate has **one live link**: a second `secret link`
 while the first is unexpired exits 3 and names the expiry; `--again` mints a
 new one anyway. A spent link opens a "This request is closed" page.
+
+**A login an agent types into a site** (since 0.101.0, DIVE-6844):
+`sudo 5dive secret link --save=<name>` mints a one-time link with no task. The
+owner pastes the value on the box's own page, and it lands in a root-only store
+no seat can read. `sudo 5dive secret saved ls` lists the names, never a value;
+`secret saved rm <name>` forgets one. The browser types it with
+`"saved":"<name>"` in a `5dive browser act` step. A name is lowercase letters,
+digits and dashes; a value is one line.
 
 **A throwaway key may come by chat:** a free-tier or test key, one the owner says
 is disposable, or a value that isn't secret. When unsure, use the link. Never
@@ -665,6 +689,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.94.1** (commit `ebbb4588`, 2026-10-19). A given box's
+_Synced to 5dive CLI **0.102.2** (commit `46c65af9`, 2026-10-26). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
