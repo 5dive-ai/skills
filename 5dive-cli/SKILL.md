@@ -631,6 +631,13 @@ routing decision without running anything.
    start with a letter, max 16 chars. Reuse a name only after `agent rm`.
 3. **Don't share bot tokens.** Two Telegram-channel agents on the same
    bot will race each other on `getUpdates`. Each agent needs its own.
+   **Never ask your owner to paste a token or key in chat.** The owner gives a
+   new agent its bot with one tap: "Connect Telegram" next to it in My team.
+   On a self-hosted box, `agent create --channels=telegram` with no token
+   makes the agent on the app chat and waits for that tap. An openclaw or
+   hermes hire reuses an AI key the box already holds. Any other secret:
+   `task need --type=secret` (on a self-hosted box, send the owner the link it
+   prints). A secret pasted anyway is never repeated or reused later.
 4. **Tear down what you spin up.** A leaked `worker-N` agent stays
    running across reboots — it's a real systemd unit, not a thread.
    On task completion call `5dive agent rm <name>`.
