@@ -509,6 +509,12 @@ for one in chat leaves it in the chat history for good.
 echo "${ELEVENLABS_API_KEY:+set}"   # from your next command, the key is in your env
 ```
 
+**A key with several parts is ONE gate, never one per part** (X's four values,
+AWS's id + secret, an OAuth client id + secret): `--secret-key=X_API_KEY,X_API_SECRET,X_ACCESS_TOKEN,X_ACCESS_TOKEN_SECRET`
+sends one link whose page has a box for each; one save fills them all and clears
+the gate. A row holds one gate, so a second secret `task need` on it for another
+key is refused: put every part in the first, or file the next key on its own row.
+
 **A key for an app you are building goes to that app, not to `tools`:**
 `--connector=project-<app>` takes any variable name and writes `KEY=value` into
 `/home/claude/projects/<app>/.env.local` (or `.env` when there is no
