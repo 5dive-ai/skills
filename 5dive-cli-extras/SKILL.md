@@ -72,6 +72,32 @@ human-facing bootstrap path, not the way an existing agent should add a sibling
 Plain `5dive uninstall` removes 5dive. `--purge` additionally wipes its state
 and user, so treat that form as destructive and require explicit human intent.
 
+What a self-hosted first run does now (0.104.0–0.113.0):
+
+- **apt install** (since 0.109.0, DIVE-6800): 5dive also installs and upgrades
+  from a signed apt repo; the README carries the two lines.
+- **Nightly updates are asked once, last** (since 0.110.0, DIVE-7369): init ends
+  with "Turn on nightly updates?". Yes runs what `5dive self-update --on` runs;
+  Not now prints that command. Never asked on a 5dive-run box or with no terminal.
+- **Telegram setup pairs only a message sent after its prompt** (since 0.109.0,
+  DIVE-7332), and asks who sent it. The same filter is
+  `agent telegram-discover --since=<unix-ts>`; its result carries `sentAt`.
+- **Speech-to-text is offered on first use, never installed unasked** (DIVE-7451):
+  `5dive plugin auto-voice --status` says what to do; `sudo 5dive plugin
+  auto-voice --on` then `--wait` installs it, `--off` records the owner's No.
+- **Grok agents are off until the owner turns them on** (since 0.104.0,
+  DIVE-7066): `sudo 5dive grok enable` shows one warning and asks the owner to
+  confirm at a terminal; `disable` stops new Grok agents (running ones keep
+  going); `5dive grok status` reads it.
+- **Encrypted 5dive.app chat with a self-hosted server** (since 0.110.0,
+  DIVE-6878): `sudo 5dive chat e2e enable <secret>` (the line 5dive.app shows)
+  makes the box key and pairs; `5dive chat e2e status`; `sudo 5dive chat devices
+  [ls|approve <code>|revoke <code>|sync]` lets a new browser or phone in from the
+  server. Since 0.112.0 (DIVE-7440) turning it on no longer hides the chat from
+  the agent.
+- **Docker on a Mac mini** (since 0.107.0, DIVE-6802): the image is arm64 and
+  amd64, keeps its state and restarts after a reboot.
+
 ## Advanced agent create: personas, BYO providers, auth deferral
 
 #### Hire a ready-made persona from the agent market
@@ -177,7 +203,19 @@ side's files are kept so switching back is instant.
 ```bash
 sudo 5dive agent switch worker-1 --to=codex [--account=<account|default>]
 sudo 5dive agent switch worker-1 --to=claude --no-handoff   # skip the handoff note
+sudo 5dive agent switch worker-1 --to=grok   # since 0.111.0 (DIVE-7414); needs `5dive grok enable`
 ```
+
+`set model=<id>` also works on openclaw and hermes seats (since 0.109.0) and
+changes a Grok seat's model (since 0.109.0, DIVE-7340). Codex runs on any
+OpenRouter model (since 0.111.0, DIVE-7417).
+
+**Re-apply a hired agent's pack over hand edits** (since 0.108.0, DIVE-7275):
+`sudo 5dive agent update worker-1 --from-pack[=<https-link>|<slug>] [--dry-run]`
+replaces the pack's section of the instructions file and the pack skills edited
+since install, keeps the CLI's own blocks byte for byte and saves the old file as
+`CLAUDE.md.bak-pack-<time>`. `pack-sync` below only replaces what it can prove
+the pack wrote.
 
 A hired (pack) agent picks up its pack's later skill, persona.yaml and CLAUDE.md
 fixes with `pack-sync` (DIVE-5205, DIVE-5211) — `--dry-run` first:
@@ -239,6 +277,17 @@ sudo 5dive account set-active-provider acme-prod hermes openrouter --json  # her
 sudo 5dive account set-model acme-prod --model=<slug>
 ```
 
+**Which login a new hire gets** (since 0.107.0, DIVE-7152): the one added last.
+`5dive account default` shows it, `--undo=<acct>:<type>` reverts that choice.
+Since 0.111.0 (DIVE-7415) the owner can pin one, `5dive account default
+<acct>[:<type>]`, which beats newer logins; `--clear` unpins. A Codex or Grok hire
+uses the box's existing sign-in instead of a new link per agent (since 0.105.0,
+DIVE-7084); `agent create --own-login` keeps a separate one.
+
+**A stuck seat:** `5dive agent recover <agent> [--to=<account|default>]` restarts
+it, or moves it to another login. The admin (lead) seat may run it without sudo
+(since 0.105.0, DIVE-7118). An account for another harness is refused.
+
 The reserved name `default` is rejected by `account add`/`rename` — at the
 agent level, `auth-profile=default` means "no override, use the shared
 `/etc/5dive/connectors/<type>.env`". Check `account usage` **before** blaming
@@ -292,6 +341,10 @@ sudo 5dive agent telegram-getme --token="$BOT_TOKEN" --json
 ```
 
 `telegram-discover`/`telegram-getme` are read-only and need no bound agent.
+In a group, `agent telegram-access groups <name> --answer=owner` makes the agent
+answer only its owner (since 0.108.0, DIVE-7250); `name` and `every` as before.
+Since 0.113.0 (DIVE-7478) a bot greets the owner the moment it is connected and
+shows typing until the agent picks the message up.
 A few more helpers:
 
 ```bash
@@ -395,7 +448,13 @@ sudo 5dive agent grant dev root       # CONFER unrestricted root (any command, a
                                       # `admin`, which is the 5dive CLI as root only.
 sudo 5dive agent grant dev admin      # re-isolate to admin (DIVE-6410), from
                                       # standard OR from managed root
+sudo 5dive agent grant dev standard   # since 0.106.0 (DIVE-7143): an admin seat
+                                      # DOWN to standard; refuses hand-written policies
 ```
+
+Since 0.106.0 (DIVE-7143) a new seat's tier follows its role, and a standard
+seat may `agent peek` a teammate, give a teammate a skill, and run
+`5dive heartbeat self on|off` to enrol or pause its own seat.
 
 `grant root` writes a managed, visudo-checked drop-in, stamps the seat
 `beyond-admin` so `agent info` stops disagreeing with the grant, and audits it.
@@ -448,6 +507,12 @@ sudo 5dive team import acme --template=./team.yaml --json
 # A team file may name its pushers (since 0.94.2, DIVE-6543): once any seat
 # declares `can_push: true|false`, a seat without `true` gets no push grant.
 # A pack seat also gets its template's extra skills (since 0.102.0, DIVE-6900).
+# since 0.105.0: --auth-profile=<account> puts every seat on that account
+# (DIVE-7074); a seat may ask for `type: codex`, and gets it when the box has a
+# ChatGPT sign-in (DIVE-7080). Since 0.103.0 an imported team gets one shared
+# folder for handing over files (DIVE-6991); since 0.108.1 a renamed team still
+# imports by its old name (DIVE-7289).
+5dive team import <slug|path> --auth-profile=acme-prod
 
 # One character is one agent per box (DIVE-5769): a seat whose persona is
 # already here is filled by that agent, even when he is in another team. He is
@@ -763,6 +828,10 @@ council deliberately, not as a substitute for a normal `task need` gate.
 
 ## Delegated push: `5dive push`
 
+**Since 0.103.0 (DIVE-6938) `push`, `deploy`, `gh` and `proof` are in the
+devteam plugin**, not core. Without it each answers
+`<verb> is in the devteam plugin: 5dive plugin install devteam`.
+
 An agent created with `--can-push` (needs `--isolation=standard`, the
 default) can push ONE named feature branch for PR review once its task's
 gate is cleared and bound to that branch:
@@ -869,6 +938,8 @@ close the row. **The pipeline never publishes to the wiki; only you can.**
 
 ## Publish zero-human evidence: `5dive proof`
 
+(In the devteam plugin since 0.103.0, DIVE-6938.)
+
 `proof` publishes the digest-derived badge, datapoint, and history to a repo;
 the scheduled form installs a daily root cron job:
 
@@ -964,10 +1035,16 @@ newest marketplace version, never downwards and never while disabled.
 Community plugins are only reported. `update --check` lists box plugins that
 are behind (`hostPluginsBehind` in `--json`).
 
+**The browser is a plugin, and a box without it says so** (since 0.105.0,
+DIVE-7117): `5dive browser` there prints the install line instead of "unknown
+command": `sudo 5dive plugin add 5dive-ai/5dive-browser`, then
+`sudo 5dive browser setup`. `5dive market show browser` says what it does first.
+
 **The devteam plugin may replace core's dev-team code** (since 0.102.1,
 DIVE-6935/6959). With `devteam@5dive-plugins` installed, 5dive runs that
 plugin's copy of the `gh`, `push`, `deploy`, PR-delivery and grader modules.
-Only that official plugin may: it must be enabled, declare the `core`
+Since 0.103.0 (DIVE-6938) it is no longer optional for those verbs: core no
+longer carries them at all. Only that official plugin may: it must be enabled, declare the `core`
 capability and ship root-only files. Any other plugin declaring `core` is
 refused at install. `5dive doctor --category=plugins` says which copy this
 box runs, and `FIVEDIVE_DEVTEAM=0` skips the plugin for one run.
@@ -1322,6 +1399,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.102.2** (commit `46c65af9`, 2026-10-26). A given box's
+_Synced to 5dive CLI **0.113.0** (commit `46f00583`, 2026-11-02). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

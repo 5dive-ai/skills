@@ -196,6 +196,12 @@ stopped agent fails with exit 8 and is dropped — there is no queue and no retr
 refuses an agent stopped on purpose (`desiredState=stopped`), and its worst case
 is 105s — size a timer's `TimeoutStartSec` above that.
 
+**See what a teammate is doing right now** (since 0.106.0, DIVE-7143):
+`5dive agent peek <name> [--lines=N]` prints its live pane (default 80 lines,
+max 500). It works from a standard seat for a teammate you share a team with,
+or one that manages the other. `5dive agent peek owner` shows your last reply to
+the box owner, wherever it went (app chat, Telegram, or their login inbox).
+
 To reply, send back to the named sender, optionally prefixing `[re=<id>]` so
 they can match it to their question:
 
@@ -284,6 +290,12 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 # since 0.32.0 (DIVE-4144): --feedback is REQUIRED on a reject and must name a
 # FIX, not only a finding. --no-fix="<why>" is the audited escape.
 5dive task reject  DIVE-7 --feedback="FINDING: x / FIX: do y / VERIFY: run z" --json
+# since 0.103.0 (DIVE-6938) PR delivery, grading and the merge gate
+# (task deliver|merge|merge-landed) live in the devteam plugin. Without it they
+# answer "<verb> is in the devteam plugin: 5dive plugin install devteam", and
+# `task done` closes a row with no bound PR but refuses one that has a PR.
+# since 0.105.0 (DIVE-7120) the heartbeat's merge tick merges a graded, green,
+# clean PR with no seat turn; `5dive task merge-tick --dry-run` shows what it would merge.
 
 # Whether a row is graded at all is the BOX's setting, and the row overrides it
 # in both directions (since 0.32.0, DIVE-4251):
@@ -539,18 +551,38 @@ on an older box the key lands root-only.)
 "no secure link in this alert" when the box could not make one. An admin seat can
 mint it itself: `sudo 5dive secret link DIVE-12` prints the same one-time link.
 Send that LINK in your reply (never ask for the key itself). A standard seat
-cannot: point the owner to the "Open secure link" card in the Telegram Mini App.
+cannot mint one, but since 0.105.0 (DIVE-7128) root mints the link and sends it
+in a standard seat's alert itself, so the seat never sees it. Since 0.106.0
+(DIVE-7151) a secret gate on a box with no chat channel prints its one-time link
+when you file it: send that.
 Since 0.91.0 (DIVE-6205) a gate has **one live link**: a second `secret link`
 while the first is unexpired exits 3 and names the expiry; `--again` mints a
 new one anyway. A spent link opens a "This request is closed" page.
 
+**A key you made yourself** (an account you signed up for, since 0.107.0,
+DIVE-7168): a seat with no root saves it without sudo,
+`echo -n "$KEY" | 5dive secret write MY_API_KEY --connector=tools`. It may add a
+new key or replace one it saved itself, never one the owner or another seat saved.
+
 **A login an agent types into a site** (since 0.101.0, DIVE-6844):
 `sudo 5dive secret link --save=<name>` mints a one-time link with no task. The
-owner pastes the value on the box's own page, and it lands in a root-only store
-no seat can read. `sudo 5dive secret saved ls` lists the names, never a value;
+owner pastes the value on the box's own page. `--pair` asks for a login, a
+password and an optional 2FA setup key on one page (since 0.104.0, DIVE-6973);
+`--card` asks for a card's number, expiry, security code and name, with a
+caution to use a low-limit virtual card (since 0.111.0, DIVE-7381). Values are
+encrypted with this box's key (`/etc/5dive/vault.key`), which no export carries:
+on a new box, save them again. `sudo 5dive secret saved ls` lists each name, its
+login (a card: last 4 digits) and its last use, never a value;
 `secret saved rm <name>` forgets one. The browser types it with
-`"saved":"<name>"` in a `5dive browser act` step. A name is lowercase letters,
-digits and dashes; a value is one line.
+`"saved":"<name>.password"` in a `5dive browser act` step (`.login`, `.2fa` types
+the current code, a card's `.number` `.exp` `.cvc` `.holder`; a bare `<name>` is
+a one-value item). A name is lowercase letters, digits and dashes.
+
+**A self-hosted box with no 5dive domain** (since 0.105.0, DIVE-7113): its first
+`secret link` gets an https name by itself (a certificate for the box's IP, else
+`<ip>.sslip.io`, on ports 80 and 443). Behind NAT, point your own domain at the
+box and run `sudo 5dive secret https enable --via=domain --host=box.example.com`;
+`5dive secret https status` shows what it has.
 
 **A throwaway key may come by chat:** a free-tier or test key, one the owner says
 is disposable, or a value that isn't secret. When unsure, use the link. Never
@@ -623,6 +655,7 @@ assume. Exits 6 (`auth_required`) rather than printing `unknown` if the actor
 can't be measured, so it doubles as a scriptable measurability check.
 
 When a task involves opening/commenting on a PR or issue as an agent, prefer
+(on a box with the devteam plugin, since 0.103.0, DIVE-6938)
 `5dive gh <gh args...>` over calling the `gh` binary directly: writes
 (`pr create`, `pr merge`, `issue comment`, …) route to the `5dive-bot`
 machine account so the GitHub actor field actually distinguishes an agent
@@ -650,19 +683,23 @@ routing decision without running anything.
 5. **Don't shell out to the underlying CLI binaries directly.** Going
    around `5dive` skips the systemd unit, the audit log, and the env
    injection — the agent will run with broken auth and no restart loop.
-6. **Read `5dive --help`** if a flag is rejected as unknown — the binary
+6. **A root-only command run without sudo re-runs itself through sudo** when
+   your seat's sudo allows that exact command (since 0.107.0, DIVE-7183), else
+   it names who can run it. Never hand that to your owner: they have no terminal.
+7. **Read `5dive --help`** if a flag is rejected as unknown — the binary
    on the host may be newer or older than this skill. The help output is
    authoritative.
-7. **Blocked on a human? Gate it.** Use `task need` with a recommendation
+8. **Blocked on a human? Gate it.** Use `task need` with a recommendation
    instead of guessing or letting the task rot silently.
-8. **When delegating a chat request, don't relay — hand off context**
+9. **When delegating a chat request, don't relay — hand off context**
    via `agent send --reply-to-chat=<id> --reply-to-msg=<id>`.
 
 ## Reference
 
 - `references/commands.md` — every subcommand and flag, copy/pasteable.
   Includes the less-frequent top-level verbs not recapped above: `5dive deploy`
-  (delegated production deploy, INST-5), `5dive bug` (diagnostic report to 5dive, sent only on the owner's yes),
+  (delegated production deploy, INST-5; with `push`, `gh` and `proof` it is in
+  the devteam plugin since 0.103.0), `5dive bug` (diagnostic report to 5dive, sent only on the owner's yes),
   `constitution` (front door onto the machine-enforced guardrails), `5dive acp`
   (speaks ACP over stdio so a client like Buzz/Zed can select 5dive as a
   coding-agent runtime — spawned BY the client, not run directly, DIVE-3017),
@@ -702,6 +739,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.102.2** (commit `46c65af9`, 2026-10-26). A given box's
+_Synced to 5dive CLI **0.113.0** (commit `46f00583`, 2026-11-02). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

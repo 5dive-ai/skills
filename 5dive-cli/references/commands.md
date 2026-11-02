@@ -4,7 +4,7 @@ Every subcommand accepts `--json` as a global flag. The exact help output
 on the host is authoritative; this file is the canonical reference shape.
 Full sweep at CLI **0.32.0** (tag `bb35e2be`, 2026-09-11). Sections marked
 **since 0.32.0** changed shape after the 0.27.1 sync; later weekly resyncs (the
-latest at **0.102.2**, 2026-10-26) add lines marked with their own version.
+latest at **0.113.0**, 2026-11-02) add lines marked with their own version.
 
 ## Top-level
 
@@ -942,6 +942,8 @@ flags/defaults for the rest — fails if neither a TTY nor `--yes` is present.
 
 ## Push (delegated GitHub push-for-review)
 
+**Since 0.103.0 (DIVE-6938) this verb is in the devteam plugin** (`sudo 5dive plugin install devteam`); without it, it answers `<verb> is in the devteam plugin: 5dive plugin install devteam`.
+
 ```
 5dive push <id|DIVE-N> [--branch=<b>] [--repo=<url>] [--dry-run] [--yes|-y]
 5dive push <id|DIVE-N> --open-pr[=<base>] [--pr-title=<t>] [--pr-body-file=<f>] [--pr-draft]
@@ -967,6 +969,8 @@ error) but as of this sync isn't read anywhere past argument parsing — treat
 it as a no-op, not a confirmation bypass.
 
 ## Deploy (delegated PRODUCTION deploy — INST-5)
+
+**Since 0.103.0 (DIVE-6938) this verb is in the devteam plugin** (`sudo 5dive plugin install devteam`); without it, it answers `<verb> is in the devteam plugin: 5dive plugin install devteam`.
 
 ```
 5dive deploy <id|DIVE-N> [--target=<project@ref>] [--env=production|preview] [--dry-run]
@@ -1294,6 +1298,8 @@ socket; bash can't listen on one and a serial `nc -l` loop drops a browser's
 second connection.
 
 ## Actor-routed gh (DIVE-2448)
+
+**Since 0.103.0 (DIVE-6938) this verb is in the devteam plugin** (`sudo 5dive plugin install devteam`); without it, it answers `<verb> is in the devteam plugin: 5dive plugin install devteam`.
 
 ```
 5dive gh <gh args...>                    # route by operation, decision printed on stderr
