@@ -44,4 +44,4 @@ capabilities themselves, which are the tool's intended function.
 
 If you believe you have found a genuine security issue in these skills (not a
 false-positive flag on documented, intended capabilities), please email
-**security@5dive.ai** rather than opening a public issue.
+**security@5dive.com** rather than opening a public issue.
