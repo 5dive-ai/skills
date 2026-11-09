@@ -164,6 +164,13 @@ sudo 5dive agent logs worker-1 --tmux --lines=80
 # 5. Tear it down when you're done — frees the systemd unit + Linux user.
 sudo 5dive agent rm worker-1 --json
 # `5dive fire worker-1` is an alias of `agent rm` (same guarded teardown).
+
+# A worker is mid-turn on the wrong thing: END THE TURN, keep the seat. `stop`
+# kills the service; `halt` sends Escape and requeues its row (never orphaned,
+# never cancelled). Admin/root.
+sudo 5dive agent halt worker-1 --reason="wrong branch" --json
+# One frame of its window, colours and all, without attaching (root):
+sudo 5dive agent logs worker-1 --screen
 ```
 
 **An agent cannot build a new agent on the box's free demo AI** (since 0.101.0,
@@ -277,6 +284,7 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 5dive task start DIVE-7 --json          # -> in_progress
 5dive task done  DIVE-7 --result="one-line summary first; detail below" --json
 5dive task block DIVE-9 --by=DIVE-7 --json   # DIVE-9 waits on DIVE-7
+5dive task assign DIVE-9 dev2 --json         # hand an open row to another seat
 
 # On a row that carries a verifier, the maker DELIVERS instead of closing;
 # the verifier passes (`verify`) or bounces it back (`reject`).
@@ -739,6 +747,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.113.0** (commit `46f00583`, 2026-11-02). A given box's
+_Synced to 5dive CLI **0.125.0** (commit `c3126237`, 2026-11-09). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
