@@ -85,10 +85,11 @@ What a self-hosted first run does now (0.104.0–0.113.0):
 - **Speech-to-text is offered on first use, never installed unasked** (DIVE-7451):
   `5dive plugin auto-voice --status` says what to do; `sudo 5dive plugin
   auto-voice --on` then `--wait` installs it, `--off` records the owner's No.
-- **Grok agents are off until the owner turns them on** (since 0.104.0,
-  DIVE-7066): `sudo 5dive grok enable` shows one warning and asks the owner to
-  confirm at a terminal; `disable` stops new Grok agents (running ones keep
-  going); `5dive grok status` reads it.
+- **Grok agents are ON by default** (since 0.121.0, DIVE-7802; they were
+  opt-in from 0.104.0). Grok's tool sends the agent's notes and chat turns to
+  xAI after every turn, so an owner who does not want that runs `sudo 5dive
+  grok disable` (stops new Grok agents; running ones keep going); `enable`
+  undoes it; `5dive grok status` reads it.
 - **Encrypted 5dive.app chat with a self-hosted server** (since 0.110.0,
   DIVE-6878): `sudo 5dive chat e2e enable <secret>` (the line 5dive.app shows)
   makes the box key and pairs; `5dive chat e2e status`; `sudo 5dive chat devices
@@ -97,6 +98,24 @@ What a self-hosted first run does now (0.104.0–0.113.0):
   the agent.
 - **Docker on a Mac mini** (since 0.107.0, DIVE-6802): the image is arm64 and
   amd64, keeps its state and restarts after a reboot.
+
+Office and offline servers (0.115.0–0.125.0):
+
+- **Local-only mode** (since 0.115.0, DIVE-7557): `sudo 5dive config local-only
+  on [--ntp=<office time server>] [--no-chat]` refuses every outside connection
+  (Telegram, a2a, cloud AI, internet updates and installs, the system's own
+  background calls). `off` undoes it; `status` reads it; `check [--watch=<s>]`
+  watches for anything that still leaves. AI models then run on the office
+  network (`agent create --base-url=http://<lan-ip>:<port>/…`). `allow|deny
+  teams` opens Microsoft Teams alone, if IT wants it (DIVE-7826).
+- **Updates by disk** (since 0.115.0, DIVE-7577): `sudo 5dive self-update
+  --from=<file>` installs a signed release file from a USB stick, no network.
+  The file must be signed by the pinned release key or, since 0.125.0
+  (DIVE-7921), by the owner's offline root key; expired or revoked keys are
+  refused. A whole local server installs from USB too (since 0.117.0, DIVE-7598).
+- **The update checks it did not break the box** (since 0.125.0, DIVE-4068):
+  after an update the first agent restart is watched, and a crash-looping start
+  rolls the CLI, launcher and unit back to the previous build.
 
 ## Advanced agent create: personas, BYO providers, auth deferral
 
@@ -203,7 +222,7 @@ side's files are kept so switching back is instant.
 ```bash
 sudo 5dive agent switch worker-1 --to=codex [--account=<account|default>]
 sudo 5dive agent switch worker-1 --to=claude --no-handoff   # skip the handoff note
-sudo 5dive agent switch worker-1 --to=grok   # since 0.111.0 (DIVE-7414); needs `5dive grok enable`
+sudo 5dive agent switch worker-1 --to=grok   # since 0.111.0 (DIVE-7414); refused after `5dive grok disable`
 ```
 
 `set model=<id>` also works on openclaw and hermes seats (since 0.109.0) and
@@ -258,6 +277,7 @@ different ones.
 ```bash
 sudo 5dive account list --json           # which accounts exist, types, agents bound
 sudo 5dive account usage --json          # per-account 5h/7d rate-limit headroom
+sudo 5dive account usage --history [--7d] [--account=<n>]  # readings over time, not only the latest
 sudo 5dive account poll                  # read every Claude account's 5h/7d now (no seat turn)
 sudo 5dive account show acme-prod --json # detail incl. which env keys are populated
 
@@ -266,6 +286,15 @@ sudo 5dive account login acme-prod --type=claude
 
 sudo 5dive agent set-account worker-1 acme-prod --json   # rebind + restart
 sudo 5dive agent set-account worker-1 default --json     # clear the override
+# An account for ANOTHER harness (Claude, ChatGPT, Grok) is refused unless
+# --switch-harness, which runs `agent switch` for you.
+sudo 5dive agent set-account worker-1 chatgpt-team --switch-harness --json
+
+# Your own AI server (Ollama, vLLM, an office GPU box), since 0.115.0 (DIVE-7568).
+# `test` sends ONE tool-call request and saves nothing: {ok, format, reason}.
+sudo 5dive account scan [--url=<address>] --json        # find AI servers on the office network
+sudo 5dive account test --base-url=<url> --model=<m> --harness=<h> [--api-key=-] --json
+sudo 5dive account add office --provider=custom --base-url=<url> --model=<m> --harness=<h> [--api-key=-]
 
 sudo 5dive account rename acme-prod acme-staging --json  # remove refuses while bound
 sudo 5dive account remove acme-staging --json
@@ -338,6 +367,10 @@ sudo 5dive agent pair worker-1 --user-id=<userId> --chat-id=<chatId> --json
 
 # Bot identity for a tappable deep link.
 sudo 5dive agent telegram-getme --token="$BOT_TOKEN" --json
+
+# Microsoft Teams contact for one agent (teams plugin; since 0.122.0, DIVE-7658).
+# --channels=teams on create/config wires the channel.
+sudo 5dive agent teams connect|status|disconnect worker-1
 ```
 
 `telegram-discover`/`telegram-getme` are read-only and need no bound agent.
@@ -432,6 +465,25 @@ Receiver-side the envelope carries `reply-to-chat=<id> reply-to-msg=<id>`; on
 seeing it, post directly in that chat via your own Telegram/Discord tool
 instead of replying back to the sender. If the target agent's bot is **not**
 in the chat, relay the reply yourself and tell the user the bot needs adding.
+
+### Share an agent as a public link; other agent verbs
+
+```bash
+# A public link anyone can add to their own 5dive (since 0.120.0, DIVE-7782).
+# --with-memory brings what it learned, through the same privacy scan
+# (since 0.121.0, DIVE-7806). Root.
+sudo 5dive agent share worker-1 [--with-memory] --json
+sudo 5dive agent share --list
+sudo 5dive agent unshare worker-1            # or the link: it stops working
+# Self-hosted: the address share links use (checked on set).
+sudo 5dive config public-address=https://box.example.com   # or =clear
+
+sudo 5dive agent restart worker-1
+sudo 5dive agent install codex [--upgrade] [--detach|--status]   # a harness CLI, if missing
+# root, at hire: run the owner's first job in a background unit; the reply
+# waits for them on the agent's Telegram bot. Idempotent per token.
+sudo 5dive agent first-job worker-1 --token=<token> --job-b64=<base64>
+```
 
 ### Widen an existing seat's grants: `agent grant`
 
@@ -776,7 +828,9 @@ want to move rather than decomposing work.
 ```bash
 5dive objective add "warm pool >= 1" --metric-cmd="5dive ps --warm --json | jq length" \
   --target=1 --direction=up [--unit=count] [--public]
-5dive objective ls | show <name> | tick [<name>] | pause <name> | rm <name>
+5dive objective ls | show <name> | tick [<name>] | pause <name>
+5dive objective rm <name> [--reason="<why>"] [--ref=<task>]   # RETIRES: keeps cycles + readings, hidden from ls
+5dive objective rm <name> --purge --yes                       # the destructive one: deletes them too
 5dive objective resume <name> [--force]   # --force bypasses a preflight refusal
 ```
 
@@ -840,6 +894,7 @@ gate is cleared and bound to that branch:
 5dive push DIVE-42 [--branch=<b>] [--repo=<o/r>] [--dry-run] [--yes]
 5dive push DIVE-42 --open-pr [--pr-title=<t>] [--pr-body-file=<f>] [--pr-draft]
 sudo 5dive push setup   # once per box: scaffold the GitHub App config
+5dive gh whoami         # both identities a `5dive gh` write could go out as
 ```
 
 The agent's own process never touches a GitHub token; a root-only helper
@@ -1125,6 +1180,9 @@ sudo 5dive trigger add webhook --name=<slug> --event=<event.type> \
 5dive trigger deliveries <name> [--limit=50]
 sudo 5dive trigger rotate <name> --secret-from-stdin
 sudo 5dive trigger enable|disable <name>
+sudo 5dive trigger test <name> --payload=<file>       # dry-run one payload through the filter
+sudo 5dive trigger replay <delivery-id>               # re-run a recorded delivery
+sudo 5dive trigger serve [--listen=127.0.0.1:8740] [--once]   # the receiver: POST /hooks/<name>
 ```
 
 The shared secret is read from **stdin** on both `add` and `rotate` — it never
@@ -1399,6 +1457,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.113.0** (commit `46f00583`, 2026-11-02). A given box's
+_Synced to 5dive CLI **0.125.0** (commit `c3126237`, 2026-11-09). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
