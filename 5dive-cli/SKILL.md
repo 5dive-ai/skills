@@ -25,7 +25,8 @@ Does **not** fire for ordinary local coding on this box — editing files,
 running a build, running tests, debugging your own program. Nothing about a
 normal coding task needs the runtime CLI.
 
-For runtime administration beyond the above — crew hosting, multi-account
+For runtime administration beyond the above — who may talk to each agent
+(`5dive people`), multi-account
 auth, auth recovery, declarative fleets/compose, goal DAGs, objectives, loops,
 compiling into the wiki, org-chart writes, governance votes,
 digest/usage/supervisor/fleet/diagnose, Telegram pairing, the persona market,
@@ -269,7 +270,8 @@ The host has a shared task queue and org chart in a group-writable sqlite
 store, so **no sudo is needed** — any `agent-*` user can read and write directly.
 
 ```bash
-# Queue a unit of work. Tasks get a DIVE-N ident; --from defaults to your
+# Queue a unit of work. Tasks get a TASK-N ident (DIVE-N on a board made before
+# 0.130.0, DIVE-8295 — the examples here use DIVE-N); --from defaults to your
 # agent name, so created_by is attributed for you.
 5dive task add "audit the auth middleware for OWASP A01" \
   --assignee=worker-1 --priority=high --json
@@ -279,6 +281,7 @@ store, so **no sudo is needed** — any `agent-*` user can read and write direct
 # What's open, who's on what (priority-ordered); --mine filters to you.
 5dive task ls --json
 5dive task ls --mine --json
+5dive task ls --brief --json          # since 0.129.0 (DIVE-8209): every row, no bodies
 
 # Drive status as work moves. block/unblock express dependencies.
 5dive task start DIVE-7 --json          # -> in_progress
@@ -587,8 +590,9 @@ the current code, a card's `.number` `.exp` `.cvc` `.holder`; a bare `<name>` is
 a one-value item). A name is lowercase letters, digits and dashes.
 
 **A self-hosted box with no 5dive domain** (since 0.105.0, DIVE-7113): its first
-`secret link` gets an https name by itself (a certificate for the box's IP, else
-`<ip>.sslip.io`, on ports 80 and 443). Behind NAT, point your own domain at the
+`secret link` gets an https name by itself: since 0.133.0 (DIVE-8361/8446) the
+box's own free `<name>.5dive.app` first, else a certificate for the box's IP, else
+`<ip>.sslip.io`, on ports 80 and 443 (`--via=5dive-app|ip|sslip|domain|auto`). Behind NAT, point your own domain at the
 box and run `sudo 5dive secret https enable --via=domain --host=box.example.com`;
 `5dive secret https status` shows what it has.
 
@@ -724,8 +728,8 @@ routing decision without running anything.
   `5dive partner hire` — plus `5dive machine add|rm|ls` (attach a machine any
   agent reaches as `ssh <name>`, DIVE-5622; `add --note="<what it is for>"`
   puts the note on its line in every Claude seat's CLAUDE.md, DIVE-6143), plus the owner surfaces `5dive telegram-app link`
-  (Mini App sign-in) and `5dive disk sweep|alarm|tick` (safe cache sweep +
-  low-disk alarm) are covered in `5dive-cli-extras`.
+  (Mini App sign-in) and `5dive disk sweep|alarm|grow|tick` (safe cache sweep,
+  low-disk alarm, grow / after a move to a bigger server) are covered in `5dive-cli-extras`.
 - **The web UI left core and is a plugin now.** `5dive plugin add
   5dive-ai/5dive-ui` installs it, and `5dive ui` then works as before. What
   stayed in core is the read contract the views render:
@@ -735,7 +739,8 @@ routing decision without running anything.
   which is how you negotiate against a box whose board does not exist yet.
 - `references/exit-codes.md` — exit codes & error classes.
 - `references/paths.md` — on-disk state layout (only for debugging).
-- `5dive-cli-extras` skill — crew hosting, accounts, auth recovery, compose/
+- `5dive-cli-extras` skill — `5dive people` (who may talk to each agent),
+  crew hosting (a plugin since 0.125.1), accounts, auth recovery, compose/
   team templates, goal DAGs, objectives, loops, memory-write/wiki, org-chart
   writes, governance votes, digest/usage/supervisor/fleet/diagnose, telegram
   pairing detail, the persona market, BYO providers, and the company wizard.
@@ -747,6 +752,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.125.0** (commit `c3126237`, 2026-11-09). A given box's
+_Synced to 5dive CLI **0.133.2** (commit `7d496e91`, 2026-11-16). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

@@ -40,7 +40,7 @@ latest at **0.113.0**, 2026-11-02) add lines marked with their own version.
 5dive fleet      ...                 # register + control OTHER boxes
 5dive up | down | ps | export        # declarative fleet (5dive.yaml)
 5dive team import <slug|path> | team ls
-5dive crew       ...                 # host a CrewAI crew (install/secret/run/show/list/uninstall)
+5dive crew       ...                 # a PLUGIN since 0.125.1 (DIVE-7950): sudo 5dive plugin add crew@5dive-plugins
 5dive secret write <KEY> --connector=<name> [--task=<DIVE-N>]   # root-only credential drop, value on stdin
                                                # (--task clears that task's pending secret gate on a
                                                # confirmed write — the secure-drop path)
@@ -52,6 +52,8 @@ latest at **0.113.0**, 2026-11-02) add lines marked with their own version.
 5dive secret saved [ls] [--json] | rm <name>   # saved names, never a value; root-only
 5dive tool ls [--json] | set <tool> | rm <tool>   # keys every agent sees as env vars (GH_TOKEN, FAL_KEY, AWS_*…);
                                                # set/rm root-only, values on stdin
+5dive tool set tailscale | rm tailscale         # since 0.126.0 (DIVE-7996): join the owner's tailnet, shields up;
+                                               # auth key (tskey-auth-...) on stdin
 5dive tool google start|poll|submit|cancel ...  # root-only: Google signs in instead of taking a key (DIVE-5934)
 5dive gate-proof ...                 # root-only: mint human-proof nonces, enforce on|off|status, verify <id>
 5dive proof      ...                 # zero-human autonomy badge publisher (on/off/status/scorecard/publish/tick)
@@ -59,6 +61,8 @@ latest at **0.113.0**, 2026-11-02) add lines marked with their own version.
 5dive run        ls|show|events|logs|retry|metrics   # ONE attempt by ONE agent at ONE task (the unit beneath trace)
 5dive liveness   [--agent=<n>] [--window=<min>]      # is a seat alive against an artifact it WROTE (DIVE-3778)
 5dive human      add|ls|show|link|unlink|owner|recipient|rm   # the people who can CLEAR a gate (DIVE-3342)
+5dive people     ls|add|set|rm|sync|knock file|knock answer   # since 0.126.0 (DIVE-8035): who may TALK to each agent
+                                               # (Telegram + Teams, one list, knock queue); writes root-only
 5dive trigger    add|ls|show|deliveries|rotate|enable|disable  # signed external events -> ordinary tasks
 5dive host       unit|journal|cron ...               # hardened host remediation under the CLI-root grant
 5dive buzz       pair [--timeout=<s>] | owner [--envelope]     # ONE QR per SERVER: pair the phone as box OWNER
@@ -127,6 +131,8 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                      #   5dive CLI as root only. Managed, visudo-checked drop-in; stamps
                                      #   the seat `beyond-admin` so `agent info` agrees; audited.
                                      #   Since 0.94.0 `grant <name> admin` narrows it back (DIVE-6410).
+                                     #   Since 0.125.1 `grant ... admin|root` REFUSE an agent caller
+                                     #   (DIVE-7982): run them as root or from the owner's login.
 5dive agent grant <name> <merge|push|deploy>  # since 0.32.0 (DIVE-4183), root: re-render an existing
                                              # STANDARD seat's managed sudoers from the current template so
                                              # it gains a capability added AFTER it was created. Idempotent;
@@ -288,6 +294,7 @@ anything blocks on stdin until the caller's timeout.
 5dive agent auth start  <type> [--auth-profile=<name>]   # non-TTY device-code; returns session id
 5dive agent auth poll   <session_id>                     # {state, url, error}
 5dive agent auth submit <session_id> --code=<callback>
+5dive agent auth submit <session_id> --code=-          # since 0.130.0 (DIVE-8292): the code read from stdin
 5dive agent auth cancel <session_id>
 5dive agent auth reap   [--ttl=<secs>] [--max-age=<secs>] [--dry-run]
                         # kill abandoned login processes (non-terminal, older than --max-age) and drop
@@ -346,6 +353,10 @@ defer_auth, isolation, auth_profile, provider, api_key`. Strings expand
 
 ## Crew (host a CrewAI crew — DIVE-787)
 
+A plugin since 0.125.1 (DIVE-7950): `sudo 5dive plugin add crew@5dive-plugins`
+first; a box without it answers `crew is a plugin now`. Its feed receipt is off
+by default.
+
 ```
 5dive crew install <git-url> --as=<name> [--entry=<module:Crew>]   # own venv on the box
 5dive crew secret set <name> KEY=VALUE [KEY=VALUE ...]             # BYO LLM key, owner-600
@@ -359,7 +370,8 @@ Durable memory persists on the box disk (`CREWAI_STORAGE_DIR`).
 
 Host-shared task queue at `/var/lib/5dive/tasks/tasks.db` (sqlite, WAL). The
 store is group-writable, so every `agent-*` user can read/write **without
-sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
+sudo**. Tasks get a `TASK-N` ident on a board made since 0.130.0 (`DIVE-N` on
+older boards, DIVE-8295) or a project prefix; statuses are
 `todo | in_progress | blocked | done | cancelled`.
 
 ```
@@ -393,6 +405,7 @@ sudo**. Tasks get a `DIVE-N` ident (or a project prefix); statuses are
                                              #   use it when the defect ALREADY blocked shipped work,
                                              #   instead of arguing the cap
 5dive task ls   [--status=<s>] [--assignee=<agent>] [--mine] [--all] [--recurring] [--project=<key>]
+                [--brief]                    # since 0.129.0 (DIVE-8209): every row, bodies dropped
                 [--gated[=human|agent]]      # DIVE-3785: only rows holding a live gate. The `gate` column is
                                              #   on EVERY ls — HUMAN:<type> a person owes an answer,
                                              #   <seat>:<type> an agent does, answered:<retire> the answer
@@ -530,6 +543,9 @@ per delivery, so the default is a spend decision the box owner makes:
 ```
 5dive config                                  # show this box's settings
 5dive config verify=always|delivered-only|never   # root; per box, not per agent
+5dive config gate-reminders=daily[@HH]|per-gate|default   # since 0.132.0 (DIVE-8398): daily = one owner
+                                                  #   reminder batch a day at HH:00 UTC; urgent gates
+                                                  #   keep their own clock; no `off` value
 5dive config verify-small=<lines>                 # DIVE-4559: a delivery UNDER this many changed lines
                                                   #   that touches nothing in the blast radius (scheduler,
                                                   #   task store, credentials, deploy, shared libs, sudo
@@ -718,7 +734,8 @@ Templates default to `fresh` (worker `/clear`s first). Since 0.85.0 (DIVE-5913)
 the cron is read in the **box's time zone** (the one `date` prints), stamped on
 the template when filed; `--tz=<zone>` picks another. Templates filed before
 that carry no zone and stay UTC — `5dive task set-tz <template> <zone|box>`
-moves one, and `task show` / `ls --recurring` print the zone. No catch-up for missed
+moves one, and since 0.131.0 `5dive task set-schedule <template> <cron>` changes
+when it fires, keeping its ident, history and last run; and `task show` / `ls --recurring` print the zone. No catch-up for missed
 ticks — keep schedules coarse. Turn a recurring loop off by `task rm`-ing the
 template.
 
@@ -1069,7 +1086,7 @@ Wakes an enrolled agent only when it has queued tasks (one per tick). Enrolment
 uses the agent's **short name** (the same one `task --assignee` expects).
 
 ```
-5dive heartbeat on  <name> [--every=<dur>] [--no-fresh]   # enrol; default 30m, fresh on
+5dive heartbeat on  <name> [--every=<dur>] [--fresh|--no-fresh]   # enrol; default 30m
 5dive heartbeat off <name>                                # stop waking (keeps settings)
 5dive heartbeat install | uninstall                       # since 0.101.0, root: the cron that runs the tick (every 5 min)
 5dive heartbeat ls                                        # enrolled + next-wake + queued count
@@ -1092,8 +1109,11 @@ uses the agent's **short name** (the same one `task --assignee` expects).
                                                            # refuse 'cold'.
 ```
 
-`<dur>`: minutes (`30`), or `45m` / `2h` / `1h30m`. `fresh` (default on) sends
-`/clear` before each task; `--no-fresh` keeps the running conversation.
+`<dur>`: minutes (`30`), or `45m` / `2h` / `1h30m`. `--fresh` sends `/clear`
+before each task; `--no-fresh` keeps the running conversation. With neither
+flag, since 0.128.0 (DIVE-8189) fresh is ON for a seat that reports to an agent
+and has no human chat (or a pinned reviewer), off otherwise and always off on
+codex; an existing enrolment keeps its mode.
 
 ## Memory (queryable team memory)
 

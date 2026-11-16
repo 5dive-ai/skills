@@ -26,7 +26,8 @@ the basic task queue. This skill is the administration surface on top of it:
   (`5dive up/down/ps/export`, `team import`, roster-wide `--type=<harness>`),
   every seat's live TUI on one screen (`5dive wall`), widening an existing
   seat's grants (`agent grant`), agents on other registered boxes
-  (`5dive fleet`), hosting a CrewAI crew (`5dive crew`), hardened host
+  (`5dive fleet`), hosting a CrewAI crew (`5dive crew`, a plugin since
+  0.125.1), hardened host
   remediation (`5dive host`), the onboarding wizard (`5dive company`).
 - **Recurring and structured work** — `task add --recurring`,
   `5dive heartbeat`, projects (`5dive project add`), multi-agent loops (a relay
@@ -309,8 +310,9 @@ sudo 5dive account set-model acme-prod --model=<slug>
 **Which login a new hire gets** (since 0.107.0, DIVE-7152): the one added last.
 `5dive account default` shows it, `--undo=<acct>:<type>` reverts that choice.
 Since 0.111.0 (DIVE-7415) the owner can pin one, `5dive account default
-<acct>[:<type>]`, which beats newer logins; `--clear` unpins. A Codex or Grok hire
-uses the box's existing sign-in instead of a new link per agent (since 0.105.0,
+<acct>[:<type>]`, which beats newer logins; `--clear` unpins; since 0.133.0 a
+Gemini login can be the default too (DIVE-8481). A Claude (since 0.126.0,
+DIVE-7989), Codex or Grok hire uses the box's existing sign-in instead of a new link per agent (since 0.105.0,
 DIVE-7084); `agent create --own-login` keeps a separate one.
 
 **A stuck seat:** `5dive agent recover <agent> [--to=<account|default>]` restarts
@@ -325,6 +327,10 @@ holds the self-account grant runs `account list` and `account usage` without
 sudo, over that rail (since 0.94.0, DIVE-6430); one without it is still refused.
 
 `account usage` used to show only what a busy seat last saw. With
+`sudo 5dive config gate-reminders=daily[@HH]` (since 0.132.0, DIVE-8398)
+bundles the owner's open-question reminders into one batch a day at HH:00 UTC;
+`per-gate` and `default` are the other values, and there is no `off`.
+
 `5dive config account-poll=on` (off by default; since 0.97.0, DIVE-6713) the
 heartbeat reads every Claude account's 5h/7d about every 10 minutes, in no seat.
 The table gains BURN/H, SEATS and the reading's age. A login the provider
@@ -500,6 +506,8 @@ sudo 5dive agent grant dev root       # CONFER unrestricted root (any command, a
                                       # `admin`, which is the 5dive CLI as root only.
 sudo 5dive agent grant dev admin      # re-isolate to admin (DIVE-6410), from
                                       # standard OR from managed root
+# since 0.125.1 (DIVE-7982) `grant ... admin|root` refuse an agent caller:
+# run them as root or from the owner's login.
 sudo 5dive agent grant dev standard   # since 0.106.0 (DIVE-7143): an admin seat
                                       # DOWN to standard; refuses hand-written policies
 ```
@@ -582,9 +590,10 @@ when missing.
 
 The box can run a CrewAI crew as a first-class workload: its own venv, BYO
 LLM key stored owner-600, durable memory on disk (`CREWAI_STORAGE_DIR`), and
-a co-signed receipt per run.
+a co-signed receipt per run (off by default since it became a plugin).
 
 ```bash
+sudo 5dive plugin add crew@5dive-plugins   # since 0.125.1 (DIVE-7950) crew is a plugin
 sudo 5dive crew install <git-url> --as=<name> [--entry=<module:Crew>] [--branch=<b>]
 sudo 5dive crew secret set <name> KEY=VALUE [KEY=VALUE ...]
 sudo 5dive crew run <name>          # also: show <name> | list | uninstall <name>
@@ -693,9 +702,11 @@ A recurring **template** materializes into a normal todo on schedule; the
 # The cron is read in the BOX's time zone (since 0.85.0, DIVE-5913); --tz=<zone>
 # picks another. Older templates stay UTC until moved:
 5dive task set-tz <template> box     # or an IANA zone: Asia/Bangkok, UTC, ...
+5dive task set-schedule <template> '0 9 * * 1'   # since 0.131.0: change WHEN it fires, same ident
 # No --assignee? Since 0.99.0 (DIVE-6804) the filing agent owns the template.
 
-sudo 5dive heartbeat on worker-1 --every=30m   # default every=30m; fresh sends /clear per task
+sudo 5dive heartbeat on worker-1 --every=30m   # default every=30m; --fresh|--no-fresh; with neither,
+                                               # fresh is ON for a no-chat seat reporting to an agent (0.128.0)
 sudo 5dive heartbeat ls              # enrolled agents + next wake + queued count
 # since 0.32.0: wake ONE seat for ONE row NOW, reusing the tick's own delivery
 # path — how an incident row gets a grader without waiting its turn in the queue.
@@ -1142,6 +1153,20 @@ sudo 5dive human link <id> --agent=<name>      # they own that agent's gates
 sudo 5dive human unlink <id> --agent=<name>
 ```
 
+**Who may TALK to an agent is a different list** (since 0.126.0, DIVE-8035):
+`5dive people` keeps one list across Telegram and Teams and writes it to each
+bot's allowFrom, each Teams config and the roles file. Allow = chat and give
+work; admin = also pay, delete, change settings.
+
+```bash
+5dive people ls                                  # everyone + waiting knocks
+sudo 5dive people add <id> --name="..." [--telegram=<id>] [--teams=<entra id>] [--role=admin|member] [--agents=a,b|*]
+sudo 5dive people set <id> --role=member         # also --agents/--name/--email/--telegram/--teams
+sudo 5dive people rm <id>                        # the owner cannot be removed
+sudo 5dive people sync                           # rewrite Telegram/Teams/roles from the list
+sudo 5dive people knock answer <knock id> allow|admin|no
+```
+
 Reads need no sudo; **every write is root-only** — this table is trusted input
 to gate routing. When a gate "pinged nobody", `human recipient <ident>` is the
 first thing to run, not the last.
@@ -1315,6 +1340,9 @@ things it used to ask root for (DIVE-5396). Each refuses rather than widens.
 5dive tool ls --json
 printf '%s\n' "$GH_TOKEN" | sudo 5dive tool set github
 sudo 5dive tool rm github
+# Tailscale (since 0.126.0, DIVE-7996): join the owner's private network, shields up
+printf '%s\n' "$TS_AUTHKEY" | sudo 5dive tool set tailscale   # tskey-auth-...
+sudo 5dive tool rm tailscale                                    # leave it
 # `5dive tool help` lists every tool and the variables it fills
 # (github, vercel, stripe, cloudflare, meta, elevenlabs, fal, higgsfield,
 #  aws, bitrix24, amocrm, hubspot, pipedrive, notion, asana, calendly, lexoffice,
@@ -1361,7 +1389,9 @@ Two box-owner surfaces round this out:
   its own (old Chrome temp files, npm/nvm download caches, `apt-get clean`,
   disabled snap revisions, and since 0.92.0 old Codex release dirs, leaked
   Chrome cache dirs and `pip cache purge`, DIVE-6329); `5dive disk alarm` tells the owner once at <5%
-  free; `5dive disk tick` is the hourly cron driver (DIVE-5190). Never touches
+  free; since 0.133.1 `sudo 5dive disk grow [--dry-run]` grows / into the rest
+  of a bigger disk after a server move (DIVE-8491); `5dive disk tick` is the
+  hourly cron driver: grow, daily sweep, then the alarm (DIVE-5190). Never touches
   homes, projects, agent memory, transcripts, model caches or backups. Log:
   `/var/log/5dive/disk-sweep.log`.
 
@@ -1457,6 +1487,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.125.0** (commit `c3126237`, 2026-11-09). A given box's
+_Synced to 5dive CLI **0.133.2** (commit `7d496e91`, 2026-11-16). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
