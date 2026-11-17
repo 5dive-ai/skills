@@ -485,8 +485,7 @@ not after `task answer` refuses you (DIVE-3228):**
 Pinning `--tier=2` yourself, or tripping a category floor, makes `approval` and
 `access` human-only too. On any type, `--needs=spend_authority|human_tap|
 secret_provision` is human-only by declaration and outranks the tier.
-So **never hand-pass `--tier=1` on an approval to keep it off a human** — that
-is already the default and the flag is a no-op.
+Passing `--tier=1` on an approval is a no-op: tier 1 is already its default.
 
 **Since 0.34.0 a tier<2 `decision` gate routes to the ORG LEAD by kind
 (DIVE-4415)** — it does not reach the paired human at all, and it does not read
@@ -494,19 +493,21 @@ the `gate_builder_routing` preference. That preference governs only an unbound
 tier<2 `approval` or `manual` gate. Read the live answer with
 `5dive task routing`, not from memory.
 
-**A gate that DOES reach the paired human must name the capability it consumes
-(DIVE-4346), or it is refused at filing.** A customer is tapped for exactly four
-things — money, a secret, something irreversible, or something only a person at a
-browser or keyboard can do — so declare one:
-`--needs=spend_authority|secret_provision|human_tap`. "This is hard" is not one of
-the four; if you cannot name the capability, it is a decision you find
-uncomfortable, not a human gate.
+**A gate that pings the paired human at filing names what it needs from them
+(DIVE-4346), or it is refused:** money, a secret, something irreversible, or a
+step only a person at a browser or keyboard can do —
+`--needs=spend_authority|secret_provision|human_tap`. Any other question follows
+the routing the owner has set (below). It still reaches a person whenever that
+routing says so.
 
-Forwarding a lead-held gate up to the paired human is `5dive task gate-escalate`,
-and only the gate's filer, their lead, its routed reviewer, the org coordinator or
-a human at a real login session may do it (DIVE-4365). **Do not re-file the gate
-as `--tier=2` to reach a person** — that loses the gate's history and is the
-failure the rail exists to stop.
+**The owner controls routing and can step into any gate.** `5dive task ls
+--gated` lists every open gate, whoever it is routed to. A human at a real login
+session can answer any gate or escalate it to themselves. `5dive task routing
+off` (the default) sends approval and manual gates to the owner, not the lead. To bring a
+lead-held gate to the owner, use `5dive task gate-escalate` (the gate's filer,
+their lead, its routed reviewer, the org coordinator or a human at a login
+session may; DIVE-4365). It keeps the gate's history, which re-filing the same
+question as a new `--tier=2` gate would lose.
 
 A routed gate QUEUES for the reviewer's next natural wake rather than waking
 their session; `--urgent` pings at file time. It is not `--recommend` — "I think

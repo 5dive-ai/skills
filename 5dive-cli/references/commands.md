@@ -644,8 +644,8 @@ length) and refuses on a closed (done/cancelled) task; bounce it back with
                 [--probe=<cmd>]                               # type=access only
                 [--needs=spend_authority|human_tap|secret_provision]   # declare the CAPABILITY the answer
                                              #   requires. HUMAN-ONLY by declaration: outranks the tier and
-                                             #   every routing kind. If you cannot NAME the capability, it is
-                                             #   a decision you find uncomfortable, not a tier-2 gate
+                                             #   every routing kind. With none of the three, leave it off:
+                                             #   the gate follows the owner's routing (`task routing`)
                 [--ask-ok="<why>"]           # since 0.32.0 (DIVE-4176): a gate that REACHES THE PAIRED HUMAN
                                              #   is now REFUSED when its --ask runs over 25 words, or names an
                                              #   ident, sha, branch, path, flag or check name. That text is all
@@ -697,10 +697,9 @@ root) or a non-agent `SUDO_UID`. Pinning `--tier=2` yourself, or tripping a
 category floor on the ask, makes `approval` and `access` human-only too — and
 `--needs=<capability>` makes ANY type human-only by declaration.
 
-Corollary: hand-passing `--tier=1` on an `approval` to keep it off a human is a
-**no-op** — tier 1 is already its default. A no-op that looks like it did not
-work is what makes the next reach for `--needs=human_tap`, which bypasses
-lead/verifier routing by constant and pings the paired human.
+Passing `--tier=1` on an `approval` is a **no-op**: tier 1 is already its
+default. `--needs=human_tap` is the explicit way to send a gate straight to the
+paired human, past lead/verifier routing.
 
 `--type=access` (DIVE-1243) is for "I'm blocked on a permission/grant I don't
 have." Pair it with `--probe=<cmd>` — a self-check that MUST currently fail
