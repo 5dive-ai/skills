@@ -202,7 +202,8 @@ sudo 5dive account list --json | jq -r '.data[] | select(.types | index("codex")
 # 2. None? Start ONE sign-in and send your owner its link and code.
 sudo 5dive agent auth start codex --auth-profile=chatgpt --json   # -> data.sessionId
 sudo 5dive agent auth poll <sessionId> --json   # until data.state=awaiting_code: url + code
-#    Then poll the SAME session every ~10 s for up to 10 min, in the foreground:
+#    Then poll the SAME session every ~10 s for up to 10 min, as a run of short
+#    foreground commands (about a minute each, so none is pushed to background):
 #    ok -> step 3. expired or error -> say so in one line, start one new sign-in.
 #    Still awaiting_code at 10 min -> end your turn quietly; poll again on the
 #    owner's next message. Never start a second sign-in while one is waiting.
