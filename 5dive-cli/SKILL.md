@@ -3,8 +3,9 @@ name: 5dive-cli
 description: >-
   Operate the local 5dive runtime: coordinate sibling agents and inspect or
   update shared tasks. Use for delegation, inter-agent messaging and
-  task-queue operations; use `5dive-cli-extras` for runtime administration
-  beyond those.
+  task-queue operations, and when your owner asks you to switch yourself to
+  another AI ("switch to Codex", "use my ChatGPT", "go back to Claude"); use
+  `5dive-cli-extras` for runtime administration beyond those.
 ---
 
 # 5dive-cli
@@ -20,6 +21,10 @@ Also fires for filing and tracking shared work (`5dive task add/ls/done`),
 the org chart (`5dive org tree`), parking a blocking question on a human
 (`task need`), a quick recall of team memory (`5dive memory search`), and
 packing an agent up to back it up, hand it over or move it (`agent export`).
+
+Also fires when your owner asks **you** to move to another AI — "switch to
+Codex", "run on my ChatGPT", "go back to Claude". You do the switch yourself;
+the owner never runs a command (recipe: *Switch yourself to another AI*).
 
 Does **not** fire for ordinary local coding on this box — editing files,
 running a build, running tests, debugging your own program. Nothing about a
@@ -184,6 +189,43 @@ compile-knowledge) since 0.98.0 (DIVE-6751).
 `agent info <name>` shows the resolved type, CLI version, model and channel
 state for one agent. For personas off the agent market, BYO-provider keys,
 `--defer-auth`, and skill-inheritance flags on create, see `5dive-cli-extras`.
+
+### Switch yourself to another AI when your owner asks
+
+"Switch to Codex" from your owner is your job, not theirs. You keep your name,
+chat, memory, skills and tasks; only the AI under you changes. Four steps:
+
+```bash
+# 1. Is an account on this server signed in to ChatGPT (Codex)?
+sudo 5dive account list --json | jq -r '.data[] | select(.types | index("codex")) | .name'
+
+# 2. None? Start a sign-in and send your owner the link and the code.
+sudo 5dive agent auth start codex --auth-profile=chatgpt --json   # -> data.sessionId
+sudo 5dive agent auth poll <sessionId> --json   # repeat until state=awaiting_code: url + code
+#    Message the owner: open <url>, sign in to ChatGPT, type <code>. Then poll
+#    every ~10 s until state=ok. expired/error: say so in one line, start again.
+
+# 3. Write your handoff and leave your next session its first message.
+#    Codex runs no turn until a message arrives, so without this file it
+#    stays silent until the owner writes again.
+cat > ~/.5dive-handoff.md <<'EOF'
+<what you were doing, open threads, the next step>
+EOF
+mkdir -p ~/.codex/channels/dispatcher/inbox
+cat > ~/.codex/channels/dispatcher/inbox/switched-back.json <<EOF
+{"id":"switched-back-$(date +%s)","text":"[5dive] You were just switched to Codex at your owner's ask. Read ~/.5dive-handoff.md, then tell your owner in one short line that you are back, now on Codex.","route":{"source":"dashboard","chat_id":"dashboard"}}
+EOF
+#    Asked on Telegram? route is {"source":"telegram","chat_id":"<that chat_id>"}.
+
+# 4. Switch. It returns at once; your session stops ~20 s later.
+sudo 5dive agent switch <your-name> --to=codex --account=<account from 1 or 2> --json
+```
+
+Before your turn ends, tell the owner one line: "Switching to Codex now, back
+in about a minute." Never say it is done before step 4 returns `ok`. A refusal
+changes nothing; tell the owner its reason in plain words. Back to Claude (or
+to Grok) is the same command with `--to=claude`/`--to=grok`; there is no queued
+first message on those, so say you will answer their next message.
 
 ### Talking to other agents: `agent send` / `agent ask`
 
