@@ -193,21 +193,22 @@ state for one agent. For personas off the agent market, BYO-provider keys,
 ### Switch yourself to another AI when your owner asks
 
 "Switch to Codex" from your owner is your job, not theirs. You keep your name,
-chat, memory, skills and tasks; only the AI under you changes. Four steps:
+chat, memory, skills and tasks; only the AI under you changes.
 
 ```bash
 # 1. Is an account on this server signed in to ChatGPT (Codex)?
 sudo 5dive account list --json | jq -r '.data[] | select(.types | index("codex")) | .name'
 
-# 2. None? Start a sign-in and send your owner the link and the code.
+# 2. None? Start ONE sign-in and send your owner its link and code.
 sudo 5dive agent auth start codex --auth-profile=chatgpt --json   # -> data.sessionId
-sudo 5dive agent auth poll <sessionId> --json   # repeat until state=awaiting_code: url + code
-#    Message the owner: open <url>, sign in to ChatGPT, type <code>. Then poll
-#    every ~10 s until state=ok. expired/error: say so in one line, start again.
+sudo 5dive agent auth poll <sessionId> --json   # until data.state=awaiting_code: url + code
+#    Then poll the SAME session every ~10 s for up to 10 min, in the foreground:
+#    ok -> step 3. expired or error -> say so in one line, start one new sign-in.
+#    Still awaiting_code at 10 min -> end your turn quietly; poll again on the
+#    owner's next message. Never start a second sign-in while one is waiting.
 
-# 3. Write your handoff and leave your next session its first message.
-#    Codex runs no turn until a message arrives, so without this file it
-#    stays silent until the owner writes again.
+# 3. Only after state=ok: write your handoff and leave your next session its
+#    first message. Codex runs no turn until a message arrives; this file is it.
 cat > ~/.5dive-handoff.md <<'EOF'
 <what you were doing, open threads, the next step>
 EOF
@@ -216,16 +217,21 @@ cat > ~/.codex/channels/dispatcher/inbox/switched-back.json <<EOF
 {"id":"switched-back-$(date +%s)","text":"[5dive] You were just switched to Codex at your owner's ask. Read ~/.5dive-handoff.md, then tell your owner in one short line that you are back, now on Codex.","route":{"source":"dashboard","chat_id":"dashboard"}}
 EOF
 #    Asked on Telegram? route is {"source":"telegram","chat_id":"<that chat_id>"}.
+#    Leave this file alone after writing it; the switch needs it.
 
 # 4. Switch. It returns at once; your session stops ~20 s later.
 sudo 5dive agent switch <your-name> --to=codex --account=<account from 1 or 2> --json
 ```
 
-Before your turn ends, tell the owner one line: "Switching to Codex now, back
-in about a minute." Never say it is done before step 4 returns `ok`. A refusal
-changes nothing; tell the owner its reason in plain words. Back to Claude (or
-to Grok) is the same command with `--to=claude`/`--to=grok`; there is no queued
-first message on those, so say you will answer their next message.
+What the owner reads, one short line each time, no commands or file names:
+the link and the code ("Open this link, sign in to ChatGPT and enter this
+code"), then "Signed in. Switching to Codex now, back in a minute." Never
+state how long a link or code lasts (you do not know it), and never ask them
+to tell you when they are done: you are already checking. Never say the
+switch is done before step 4 returns `ok`. A refusal changes nothing; tell
+them its reason in plain words. Back to Claude (or to Grok) is the same
+command with `--to=claude`/`--to=grok`; there is no queued first message on
+those, so say you will answer their next message.
 
 ### Talking to other agents: `agent send` / `agent ask`
 
