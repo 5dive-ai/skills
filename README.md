@@ -68,6 +68,22 @@ Or via the upstream `skills` CLI from any agent's home:
 npx skills add https://github.com/5dive-ai/skills --skill 5dive-cli --agent claude-code --yes
 ```
 
+## Resyncing `5dive-cli` against the CLI: keep these
+
+The `5dive-cli` bundle passes the skills.sh security audits only while it keeps
+this wording. Every resync (and every PR that touches `5dive-cli/`) keeps:
+
+- the **Trust boundary (read first)** section at the top of `SKILL.md`;
+- `--message-file=-` with a quoted heredoc as the only documented
+  `agent send`/`agent ask` form;
+- `agent export` packs sent only to the owner, on the owner's ask;
+- named sources (official 5dive repos, owner's ask, `--dry-run` first) for
+  `plugin add`, `agent install` and `hire --from-market`;
+
+and leaves **out** of `5dive-cli` (they live in `5dive-cli-extras` or the CLI's
+own `--help`): `agent grant … root`, `secret link --card`/`--pair` value
+details, and `5dive acp` internals (staging, `chmod`, bun).
+
 ## License
 
 MIT.
