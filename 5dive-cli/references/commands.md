@@ -126,13 +126,8 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                                                   # (sudoers for _push_do); refused on --isolation=
                                                                   # sandboxed, no-op+warn on --isolation=admin (already
                                                                   # covered by its broad sudo)
-5dive agent grant <name> root         # DIVE-4557, root: CONFER unrestricted root (any command, any
-                                     #   user) on a seat of ANY tier — wider than `admin`, which is the
-                                     #   5dive CLI as root only. Managed, visudo-checked drop-in; stamps
-                                     #   the seat `beyond-admin` so `agent info` agrees; audited.
-                                     #   Since 0.94.0 `grant <name> admin` narrows it back (DIVE-6410).
-                                     #   Since 0.125.1 `grant ... admin|root` REFUSE an agent caller
-                                     #   (DIVE-7982): run them as root or from the owner's login.
+# Widening a seat's privileges is the OWNER's decision, made from the owner's own
+# login: since 0.125.1 the CLI refuses an agent caller (DIVE-7982). Not covered here.
 5dive agent grant <name> <merge|push|deploy>  # since 0.32.0 (DIVE-4183), root: re-render an existing
                                              # STANDARD seat's managed sudoers from the current template so
                                              # it gains a capability added AFTER it was created. Idempotent;
@@ -161,14 +156,14 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                               # (root; replaces raw systemctl in the admin sudoers — sudo-rs safe)
 5dive agent stats   <name> | --all            # --all = whole fleet, incl. health hints
 5dive agent logs    <name> [--follow] [--lines=N] [--tmux]
-5dive agent send    <name> <text...>|--message=<text>|--message-file=<path>
+5dive agent send    <name> --message-file=-|--message-file=<path>
                                      [--from=<sender>] [--raw] [--wake]
                                      [--reply-to-chat=<id> [--reply-to-msg=<id>]]
-                                     # --message-file reads the body VERBATIM from a file (DIVE-2627) — use it
-                                     # for any message that quotes CLI verbs (backticks/$() in --message=
-                                     # execute as you otherwise). --wake starts a stopped agent's unit and
-                                     # delivers once its prompt is up, instead of failing with exit 8.
-5dive agent ask     <name> <text...>|--message=<text> [--from=<sender>] [--timeout=120]
+                                     # Documented form: --message-file=- fed by a quoted heredoc
+                                     # (<<'MSG' … MSG), so the body arrives exactly as written (DIVE-2627).
+                                     # --wake starts a stopped agent's unit and delivers once its prompt is
+                                     # up, instead of failing with exit 8.
+5dive agent ask     <name> --message-file=-|--message-file=<path> [--from=<sender>] [--timeout=120]
                                      [--idle-secs=5] [--poll-secs=2] [--buffer-lines=2000]
                                      [--allow-unfenced]
                                      [--reply-to-chat=<id> [--reply-to-msg=<id>]]
@@ -176,7 +171,8 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                      # isn't fenced (refused when --from=council*: a seat that can't fence
                                      # must surface as a capture failure, never a scraped guess)
 5dive agent <name>  tui                       # attach this terminal
-5dive agent install <type> [--upgrade]        # install (or, with --upgrade/--force/-u, reinstall @latest) the type's binary
+5dive agent install <type> [--upgrade]        # install (or, with --upgrade/--force/-u, reinstall @latest) the type's
+                                              # binary from that agent type's official vendor release only
 5dive agent set-account <agent> <account|default>   # alias for `agent config set auth-profile=`
 ```
 
@@ -196,8 +192,8 @@ a shared team bot, new no-bot agents auto-attach (own forum topic, send-only on
 the shared token) unless `--no-team-bot`.
 
 Every `--type=codex` create (DIVE-1535) auto-seeds `~/.codex/AGENTS.md` with
-the a2a return-channel convention — `5dive agent send <from> "<result>"` on
-finish, since a headless codex worker only prints to its own tmux pane. Skipped
+the a2a return-channel convention — send the result back to the sender with
+`agent send` on finish, since a headless codex worker only prints to its own tmux pane. Skipped
 if that file already exists (never clobbers a hand-curated one).
 
 ## Hire from the agent market
@@ -216,10 +212,12 @@ if that file already exists (never clobbers a hand-curated one).
 5dive hire <role> --from-market [--as=<name>] --yes       # provision the top match (DIVE-993)
 ```
 
-`--from-market` provisions a REAL teammate and is gated (DIVE-1013): `--dry-run`
-creates nothing; a TTY requires interactive `y/N`; non-interactive needs an
-explicit `--yes` or it aborts after the disclosure. It runs `agent import` under
-the hood — `agent inspect <slug>` first for the full disclosure.
+`--from-market` provisions a REAL teammate from 5dive's own market and is gated
+(DIVE-1013). **Always `--dry-run` first, show your owner what it would install,
+and pass `--yes` only on their approval.** `--dry-run` creates nothing; a TTY
+requires interactive `y/N`; non-interactive needs an explicit `--yes` or it
+aborts after the disclosure. It runs `agent import` under the hood (hooks off
+by default) — `agent inspect <slug>` first for the full disclosure.
 
 ## Config
 
@@ -1252,6 +1250,10 @@ The secret never appears in argv — it is read from stdin on both `add` and
 
 ## Plugins
 
+Plugins come from 5dive's official repos (the `5dive-plugins` marketplace and
+`5dive-ai/*`) or a marketplace your owner added. Install one only on your
+owner's ask.
+
 ```
 5dive plugin list [--json]                              # installed, with version and tier
 5dive plugin add|remove|upgrade <plugin>[@<marketplace>] [--yes]
@@ -1509,61 +1511,13 @@ an unexplained not-reached (also under `--strict`, any not-reached at all).
 ## ACP (Agent Client Protocol — DIVE-3017)
 
 ```
-5dive acp
-5dive acp -h | --help    # usage one-liner; takes no other arguments
+5dive acp -h | --help    # usage one-liner
 ```
 
-Speaks ACP over stdin/stdout so an ACP client — Buzz (block/buzz), Zed —
-can select 5dive as a coding-agent runtime. **Not interactive: the client
-spawns it**, so this is not a verb a human or another agent runs directly.
-A NATIVE verb, not an adapter: 5dive registers as its own runtime
-(`command: "5dive", args: ["acp"]`) rather than going through a third-party
-bridge.
-
-A session **ATTACHES to a named fleet agent** (its memory, tasks, org
-position and heartbeat intact) instead of opening a blank one — the roster
-is exposed as ACP `availableCommands`, so `/<name>` or `/attach <name>`
-picks the agent and `/agents` re-lists the fleet. Each prompt on an attached
-session becomes one `5dive agent ask <name> <text> --timeout=${ACP_ASK_TIMEOUT:-180}`
-turn — a real turn on a real agent, streamed at the granularity `agent ask`
-prints at, not per-token.
-
-Runs on **bun**, staged from an embedded server into `${ACP_RUN_DIR:-/opt/5dive}/acp-server.ts`
-at each invocation. Resolves its own bun binary — `ACP_BUN_BIN` overrides,
-then `/usr/local/bin/bun` / `~/.bun/bin/bun`, then the caller's own `PATH`
-(load-bearing off-box: a Buzz user on their own Mac has none of this VM's
-fixed paths), then a `sudo -u claude` login-shell probe. Missing bun fails
-loud (`E_NOT_INSTALLED`) with an install hint, rather than dying silently
-once the ACP client has already spawned it. `exec`s into bun on success, so
-the row this verb writes to the audit log is emitted *before* the exec
-(the dispatcher's own EXIT-trap audit row never fires past an `exec`).
-
-**Known defect (2026-08-10): the DEFAULT stage directory is root-only. Set
-`ACP_RUN_DIR` to a writable path and it works.**
-
-```
-ACP_RUN_DIR="$HOME/.cache/5dive-acp" 5dive acp     # works as any user
-```
-
-The staging step unconditionally rewrites *and* `chmod`s
-`${ACP_RUN_DIR:-/opt/5dive}/acp-server.ts` on every invocation, and that chmod
-needs *ownership* of the file rather than write access to it. `/opt/5dive` is
-`root:root`, so a non-root caller gets "could not stage the ACP server in
-/opt/5dive" — which reads like a broken install rather than a wrong stage
-directory. Note the failure survives every host-side permission arrangement
-(group-writable dir, group-writable file, pre-staging the file as root): once
-the file exists and someone else owns it, the unconditional chmod fails for
-everyone but that owner. Pointing `ACP_RUN_DIR` at a directory the caller owns
-sidesteps all of it, because the caller then owns the file it stages.
-
-**If you are registering 5dive as an ACP runtime in a client (Buzz, Zed), set
-`ACP_RUN_DIR` in the harness's env-var field.** Without it the spawn fails on
-first launch for any non-root user.
-
-The underlying fix is still worth making — stage per-user by default, or skip
-the chmod when the file is already correct — so that the verb works with no
-environment set up. Until then the env var is a complete workaround, not a
-partial one.
+Lets an ACP client (Buzz, Zed) list your owner's agents and talk to one. **The
+client starts it; an agent never runs it.** Each prompt from the client becomes
+one ordinary `agent ask` turn on the agent it picked. Setting a client up is
+your owner's job, covered in the client's own docs.
 
 ## Models
 
