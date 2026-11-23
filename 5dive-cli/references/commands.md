@@ -40,6 +40,9 @@ latest at **0.113.0**, 2026-11-02) add lines marked with their own version.
 5dive fleet      ...                 # register + control OTHER boxes
 5dive up | down | ps | export        # declarative fleet (5dive.yaml)
 5dive team import <slug|path> | team ls
+5dive team freedom [ask|balanced|yolo] [--agent=<n>] [--json]   # since 0.139.0: how much each agent does without asking (set: root)
+5dive helper     ensure|status       # since 0.138.0: the "5dive" Help & setup seat; new boxes get none (0.140.2)
+5dive local      serve|pair|devices|app install|status   # the office chat server (root, except status)
 5dive crew       ...                 # a PLUGIN since 0.125.1 (DIVE-7950): sudo 5dive plugin add crew@5dive-plugins
 5dive secret write <KEY> --connector=<name> [--task=<DIVE-N>]   # root-only credential drop, value on stdin
                                                # (--task clears that task's pending secret gate on a
@@ -163,6 +166,8 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                      # (<<'MSG' … MSG), so the body arrives exactly as written (DIVE-2627).
                                      # --wake starts a stopped agent's unit and delivers once its prompt is
                                      # up, instead of failing with exit 8.
+                                     # Exit 12 (since 0.141.0) = typed but the submit was not seen
+                                     # (sent:false): retry later. A spooled send (queued:true) exits 0.
 5dive agent ask     <name> --message-file=-|--message-file=<path> [--from=<sender>] [--timeout=120]
                                      [--idle-secs=5] [--poll-secs=2] [--buffer-lines=2000]
                                      [--allow-unfenced]
@@ -171,6 +176,11 @@ no-sudo surfaces — `task`, `project`, `org`, `memory search/doctor`, `usage`,
                                      # isn't fenced (refused when --from=council*: a seat that can't fence
                                      # must surface as a capture failure, never a scraped guess)
 5dive agent <name>  tui                       # attach this terminal
+5dive agent proactive <name> [off|little|more|offer yes|not-now] [--json]   # since 0.137.0: may it message its owner first?
+                                              # off (default) / little: 1 a day / more: 3 a day; only the owner raises it
+5dive agent switch <name> --to=claude|codex|grok [--account=<a>] [--no-handoff] [--handoff-wait=<s>] [--keep-model]
+                                              # in place; a Hermes/OpenClaw seat: --to=claude only (0.136.0),
+                                              # --keep-model keeps its own key and model
 5dive agent install <type> [--upgrade]        # install (or, with --upgrade/--force/-u, reinstall @latest) the type's
                                               # binary from that agent type's official vendor release only
 5dive agent set-account <agent> <account|default>   # alias for `agent config set auth-profile=`
@@ -250,6 +260,7 @@ by default) — `agent inspect <slug>` first for the full disclosure.
 5dive agent telegram-info     <name> [--refresh]              # name-based getMe; caches botUsername in registry
 5dive agent telegram-access get <name>                        # read access.json (DM policy, allowlist, groups)
 5dive agent telegram-access set <name>                        # write access.json from JSON on stdin; live, no restart
+                                                              # since 0.137.1: adding an id lifts a manager-made bot's owner-only lock
 5dive agent telegram-access groups <name> [--answer=name|every] [--names=<a,b,...>]
                                                               # since 0.96.0: answer by name or every message; --names
                                                               # is EVERY name it answers to (empty: @mention/reply only)
@@ -342,6 +353,8 @@ Account rotation (move an agent across profiles on quota exhaustion):
 5dive export [-o file]               # dump the live fleet to a v2 5dive.yaml
 5dive team import <slug|path> [--auth-profile=<name>]   # provision a whole team template
 5dive team ls                        # bundled templates
+5dive team freedom [--agent=<name>] [--json]              # each agent: Ask me often / Balanced / YOLO / Custom
+sudo 5dive team freedom ask|balanced|yolo [--agent=<name>]  # set one agent, or every agent
 ```
 
 Default file: `5dive.yaml` / `5dive.yml` in cwd. Per-agent spec keys:
@@ -366,9 +379,12 @@ Durable memory persists on the box disk (`CREWAI_STORAGE_DIR`).
 
 ## Tasks (shared queue)
 
-Host-shared task queue at `/var/lib/5dive/tasks/tasks.db` (sqlite, WAL). The
-store is group-writable, so every `agent-*` user can read/write **without
-sudo**. Tasks get a `TASK-N` ident on a board made since 0.130.0 (`DIVE-N` on
+Host-shared task queue at `/var/lib/5dive/tasks/tasks.db` (sqlite, WAL). Every
+`agent-*` user reads and writes it through `5dive task …` **without sudo**.
+Since 0.141.0 (DIVE-9001) only the CLI can open it: the folder belongs to a
+group no agent is in, and a board verb run by a seat re-runs itself once
+through `sudo -g 5dive-board`. Your own `sqlite3`, python or node on the file is
+refused. Tasks get a `TASK-N` ident on a board made since 0.130.0 (`DIVE-N` on
 older boards, DIVE-8295) or a project prefix; statuses are
 `todo | in_progress | blocked | done | cancelled`.
 
@@ -745,6 +761,7 @@ template.
             #   {"gate":"approval","label":"..."}                 human approval gate
             # [--project=<key>] [--owner=<agent>] [--from=<who>]
 5dive task loop ls [--all]                            # board of loop runs: step progress + status
+5dive task loop improve <loop> on|off|log [--json]|undo <id>   # since 0.137.0 (DIVE-8692): grade each run, keep a change only if it scores higher
 # Edit a running loop = act on its subtasks (task ls/assign/block/unblock/rm, slip in a task need gate).
 # Stop it = `task rm` the run parent (cascades to the steps).
 
@@ -1066,7 +1083,7 @@ loop.
 
 ## Org chart
 
-Who-reports-to-whom across agents, in the same group-writable store (no sudo).
+Who-reports-to-whom across agents, in the same store (no sudo; CLI only).
 A single self-referential `reports_to` edge per agent, plus optional role/title.
 
 ```
@@ -1459,6 +1476,11 @@ owner was already asked about prints "already asked on <date>; don't ask
 again", and the owner is asked about at most one bug a day. An unreachable API
 spools the report under `${XDG_STATE_HOME:-~/.local/state}/5dive/bug-spool/`
 and the next approved `--file` sends it.
+
+A self-hosted box hears back (since 0.141.0, DIVE-9000): a report filed with no
+box key keeps a reply token in the filing seat's own ledger, and once a day the
+heartbeat asks 5dive for an answer and hands it to the box's lead agent, which
+tells its owner. Nothing is pushed to the box and no contact data leaves it.
 
 **The payload is a fixed ALLOWLIST**, never a denylist — version, OS, bash
 version, install method, the failing verb + exit code, `selfcheck` probe

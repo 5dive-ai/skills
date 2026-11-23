@@ -19,6 +19,7 @@ stable.
 | 9    | `pairing`       | Pair code not pending or invalid.                      |
 | 10   | `permission`    | Must run as root (use `sudo`).                         |
 | 11   | `timeout`       | Plugin didn't materialize within waitloop.             |
+| 12   | `unconfirmed`   | `agent send` typed it but the submit was not seen (`sent:false`); retry later. Since 0.141.0 (DIVE-8957). |
 
 ## Suggested branching
 

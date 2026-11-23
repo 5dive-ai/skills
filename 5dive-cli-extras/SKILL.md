@@ -117,6 +117,18 @@ Office and offline servers (0.115.0–0.125.0):
 - **The update checks it did not break the box** (since 0.125.0, DIVE-4068):
   after an update the first agent restart is watched, and a crash-looping start
   rolls the CLI, launcher and unit back to the previous build.
+- **The office chat on the firm's own name** (since 0.134.0, DIVE-8565):
+  `sudo 5dive local serve --domain=team.firm.com [--cert=<file> --key=<file>]`
+  serves on port 443 (`--domain=none` undoes it). Renewed certificate files are
+  picked up by themselves, with a warning 14 days before expiry (0.135.0,
+  DIVE-8611). `sudo 5dive local pair [--owner] [--name=<person>]` makes a
+  one-time code for a phone or laptop (`--owner` may also manage the server at
+  `/panel`); `local devices ls|revoke <id>`, `local status`.
+- **The 5dive app on the office server** (since 0.138.0, DIVE-8809): `sudo 5dive
+  local app install <file> [--allow-downgrade]` serves the app at `/` (the old
+  page moves to `/lite`); one Office server file installs server and app
+  together. The server answers the app's people, join links and agent grants
+  (DIVE-8807).
 
 ## Advanced agent create: personas, BYO providers, auth deferral
 
@@ -224,7 +236,13 @@ side's files are kept so switching back is instant.
 sudo 5dive agent switch worker-1 --to=codex [--account=<account|default>]
 sudo 5dive agent switch worker-1 --to=claude --no-handoff   # skip the handoff note
 sudo 5dive agent switch worker-1 --to=grok   # since 0.111.0 (DIVE-7414); refused after `5dive grok disable`
+sudo 5dive agent switch hermes-1 --to=claude [--keep-model]   # since 0.136.0: Hermes/OpenClaw -> Claude only
 ```
+
+A Hermes or OpenClaw seat moves to Claude Code in place too (since 0.136.0,
+DIVE-8672), and only to Claude. `--keep-model` (DIVE-8675) keeps its own
+DeepSeek, Kimi, Qwen, GLM or OpenRouter key and model instead of the Claude
+plan. A switch copies the seat's skills to the new harness (DIVE-8667).
 
 `set model=<id>` also works on openclaw and hermes seats (since 0.109.0) and
 changes a Grok seat's model (since 0.109.0, DIVE-7340). Codex runs on any
@@ -426,6 +444,10 @@ sudo 5dive agent telegram-access groups worker-1 [--answer=name|every] [--names=
 sudo 5dive agent telegram-access seed-names [worker-1]   # add the persona card name, once
 ```
 
+Since 0.137.1 (DIVE-8791) `set` adding an id also lifts Telegram's owner-only
+lock on a bot the manager made; `data.open_state` in the `--json` reply says
+what happened.
+
 `groups` (since 0.96.0 to 0.98.0, DIVE-6675/6684/6729) sets how the agent answers
 in its groups: when called by name (the default) or every message. `--names=`
 writes EVERY name it answers to, its bot name included, and replaces the list.
@@ -491,6 +513,23 @@ sudo 5dive agent install codex [--upgrade] [--detach|--status]   # a harness CLI
 sudo 5dive agent first-job worker-1 --token=<token> --job-b64=<base64>
 ```
 
+**Proactive** (since 0.137.0, DIVE-8718): may an agent message its owner first?
+
+```bash
+5dive agent proactive <name> [--json]          # its level, today's count, acted-on rate
+sudo 5dive agent proactive <name> off|little|more   # Normal (default) / High: 1 a day / Very high: 3 a day
+5dive agent proactive <name> offer yes|not-now # the owner's answer to a level-up offer
+```
+
+Only the owner raises the level. After 8 of the last 10 messages were acted
+on, the agent may offer a level-up, word for word, and the owner's Yes tap
+raises it (0.138.0, DIVE-8838). `claim` and `reaction` are the check-in run's
+own verbs.
+
+`5dive helper status|ensure` (since 0.138.0, DIVE-8819) reads the "5dive" Help &
+setup seat. Since 0.140.2 (DIVE-8946) new boxes get none: what the owner told
+5dive before buying goes to their first hire, and `ensure` only reports.
+
 ### Widen an existing seat's grants: `agent grant`
 
 A capability added to the sudoers template after a seat was created does not
@@ -539,6 +578,8 @@ sudo 5dive export     # dump the LIVE fleet to a v2 5dive.yaml
 
 sudo 5dive team ls
 sudo 5dive team import startup --json   # bundled multi-agent company template
+5dive team freedom [--agent=<name>] [--json]        # since 0.139.0: each agent's level
+sudo 5dive team freedom ask|balanced|yolo [--agent=<name>]   # set one agent, or all of them
 
 # every bundled template says `type: claude`. --type puts the WHOLE roster on
 # one harness instead — the parsed spec is rewritten, so the create argv, the
@@ -580,6 +621,15 @@ sudo 5dive team import acme --template=./team.yaml --json
 5dive team leave <team> <agent>                # out of one team, still in the others
 5dive team rm <team>                           # forget a team; fires nobody (`agent rm` fires)
 ```
+
+**Team freedom** (since 0.139.0, DIVE-8853; per agent since 0.140.0, DIVE-8872)
+sets how much an agent does without asking its owner. `ask` asks before
+sending, posting, paying and deleting, and new email senders wait. `balanced`
+sends and acts on its own, but posting, paying and deleting still ask. `yolo`
+asks for nothing (wallet caps still hold). A level whose switches were changed
+by hand reads `Custom`, with what differs. The box has one browser, so it
+follows the most careful agent's level. Once Team freedom has been used on a
+box, new agents start on `balanced`.
 
 Spec keys per agent: `type, channels, telegram_token, discord_token,
 workdir, skills, no_skills, defer_auth, isolation, auth_profile, provider,
@@ -782,6 +832,21 @@ positives).
 5dive task loop outcome <loop> --cmd="<command that prints one number>"
 5dive task loop resume <loop>   # it pauses itself after 3 days without a rise
 ```
+
+#### Self-improving loops (since 0.137.0, DIVE-8692)
+
+```bash
+5dive task loop improve <loop> on|off        # off by default
+5dive task loop improve <loop> log [--json]  # every change tried, kept/dropped/refused/undone, AI cost per run
+5dive task loop improve <loop> undo <id>     # text back exactly as before change <id> (and later ones)
+```
+
+With it on, each run of a scheduled loop is graded 0-100 against its
+acceptance criteria (or 3-5 the grader derives once and keeps). One small
+change to the loop's text is tried on the next run and kept only if that run
+scores higher; otherwise the text goes back. A change that adds a new reach
+(spend, publish, send, a recipient, a tool, install…) is refused. One model
+call per run, on the owner's own AI.
 
 #### LOOP-7: agent-native orchestration verbs
 
@@ -1487,6 +1552,6 @@ See `5dive-cli`'s `references/commands.md`, `exit-codes.md`, and `paths.md`
 for full flag detail, and `sudo 5dive --help` / `sudo 5dive <noun> --help`
 as the ultimate authority if a flag here is rejected.
 
-_Synced to 5dive CLI **0.133.2** (commit `7d496e91`, 2026-11-16). A given box's
+_Synced to 5dive CLI **0.141.1** (commit `e80694c5`, 2026-11-23). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._

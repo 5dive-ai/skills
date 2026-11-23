@@ -302,6 +302,11 @@ heartbeat's tick, minutes apart — not the moment the seat goes idle. A scoped
 longer claims a DELIVERY failure, it names the audit row to check (since
 0.94.0, DIVE-6414).
 
+Since 0.141.0 (DIVE-8957) a send that was typed into the seat but whose
+submit was never seen exits **12** (`unconfirmed`, `sent:false`) instead of
+reporting OK: the text sits in the receiver's composer, unsent. Retry later.
+A spooled send to a busy seat (`queued:true`) still exits 0.
+
 If a user pings you on a Telegram/Discord chat where the target agent's bot
 is **also** a member, don't relay the answer yourself — hand it off with
 `--reply-to-chat=<id> [--reply-to-msg=<id>]` (values come from the inbound
@@ -330,8 +335,10 @@ itself stayed in core under `agent`.
 
 ### Track shared work: the task queue + org chart
 
-The host has a shared task queue and org chart in a group-writable sqlite
-store, so **no sudo is needed** — any `agent-*` user can read and write directly.
+The host has a shared task queue and org chart, and **no sudo is needed** —
+any `agent-*` user reads and writes it through `5dive task …`. Since 0.141.0
+(DIVE-9001) only the CLI can open the store: a seat's own `sqlite3` on
+`tasks.db` is refused, so use the verbs.
 
 ```bash
 # Queue a unit of work. Tasks get a TASK-N ident (DIVE-N on a board made before
@@ -635,6 +642,12 @@ Since 0.91.0 (DIVE-6205) a gate has **one live link**: a second `secret link`
 while the first is unexpired exits 3 and names the expiry; `--again` mints a
 new one anyway. A spent link opens a "This request is closed" page.
 
+**The owner may say no to a secret gate** (since 0.137.0, DIVE-8709): the
+app's Skip runs `5dive task answer DIVE-12 --value=declined`, the one `--value`
+a secret gate takes. Nothing is saved and you are pinged "DECLINED". Do not
+ask for it again: carry on without it, or close the task and say what it
+needed.
+
 **A key you made yourself** (an account you signed up for, since 0.107.0,
 DIVE-7168): a seat with no root saves it without sudo,
 `echo -n "$KEY" | 5dive secret write MY_API_KEY --connector=tools`. It may add a
@@ -803,7 +816,9 @@ routing decision without running anything.
 - `references/exit-codes.md` — exit codes & error classes.
 - `references/paths.md` — on-disk state layout (only for debugging).
 - `5dive-cli-extras` skill — `5dive people` (who may talk to each agent),
-  crew hosting (a plugin since 0.125.1), accounts, auth recovery, compose/
+  `5dive team freedom` (how much each agent does without asking), `agent
+  proactive` (may it message its owner first), self-improving loops, the office
+  chat server (`5dive local`), `5dive helper`, crew hosting (a plugin since 0.125.1), accounts, auth recovery, compose/
   team templates, goal DAGs, objectives, loops, memory-write/wiki, org-chart
   writes, governance votes, digest/usage/supervisor/fleet/diagnose, telegram
   pairing detail, the persona market, BYO providers, and the company wizard.
@@ -815,6 +830,6 @@ this skill conflicts with what the running binary accepts, trust the
 binary — run `sudo 5dive --help` or `sudo 5dive agent <sub> --help`
 directly and follow that.
 
-_Synced to 5dive CLI **0.133.2** (commit `7d496e91`, 2026-11-16). A given box's
+_Synced to 5dive CLI **0.141.1** (commit `e80694c5`, 2026-11-23). A given box's
 binary can lag by up to a day behind main (nightly update channel) — trust
 `5dive --help` if they differ._
